@@ -1,0 +1,12 @@
+version: '3.4'
+name: "services-service"
+
+services:
+    
+  services_api:
+    build:
+      context: ./
+      dockerfile: ./api_container/Dockerfile
+    ports:
+      - "${EXTERNAL_SERVICES_API_PORT}:${SERVICES_API_PORT}"
+    restart: unless-stopped
