@@ -3,7 +3,7 @@ name: "services-service"
 
 services:
     
-  services_api:
+  api:
     build:
       context: ./
       dockerfile: ./api_container/Dockerfile
