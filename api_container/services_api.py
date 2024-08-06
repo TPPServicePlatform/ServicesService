@@ -47,7 +47,8 @@ logger.info(f"Services API started in {starting_duration}")
 def get_services(username: str):
     """
     curl example to get the list of services for an account:
-    curl -X 'GET' 'http://localhost:8001/api/services/marco' --header 'Content-Type: application/json'
+    sin nginx -> curl -X 'GET' 'http://localhost:8001/api/services/marco' --header 'Content-Type: application/json'
+    con nginx -> curl -X 'GET' 'http://localhost/api/services/marco' --header 'Content-Type: application/json'
     """
     services = sql_manager.get(username)
     if not services:
@@ -58,7 +59,8 @@ def get_services(username: str):
 def create_services(body: dict):
     """
     curl example to create a service:
-    curl -X 'POST' 'http://localhost:8001/api/services/create_service' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
+    sin nginx -> curl -X 'POST' 'http://localhost:8001/api/services/create_service' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
+    con nginx -> curl -X 'POST' 'http://localhost/api/services/create_service' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
     """
     username = body.get("username")
     service_name = body.get("service_name")
