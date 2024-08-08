@@ -59,8 +59,8 @@ def get_services(username: str):
 def create_services(body: dict):
     """
     curl example to create a service:
-    sin nginx -> curl -X 'POST' 'http://localhost:8001/api/services/create_service' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
-    con nginx -> curl -X 'POST' 'http://localhost/api/services/create_service' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
+    sin nginx -> curl -X 'POST' 'http://localhost:8001/api/services/create' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
+    con nginx -> curl -X 'POST' 'http://localhost/api/services/create' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
     """
     username = body.get("username")
     service_name = body.get("service_name")
