@@ -55,7 +55,7 @@ def get_services(username: str):
         raise HTTPException(status_code=404, detail="Services not found")
     return services
 
-@app.post("/create_service")
+@app.post("/create")
 def create_services(body: dict):
     """
     curl example to create a service:
