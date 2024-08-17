@@ -38,35 +38,54 @@ app.add_middleware(
 
 sql_manager = Services()
 
-REQUIRED_CREATE_FIELDS = ["username", "service_name"]
+REQUIRED_CREATE_FIELDS = {"service_name", "provider_username", "category", "price"}
+OPTIONAL_CREATE_FIELDS = {"description"}
+VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
 
-@app.get("/{username}")
-def get_services(username: str):
-    """
-    curl example to get the list of services for an account:
-    sin nginx -> curl -X 'GET' 'http://localhost:8001/api/services/marco' --header 'Content-Type: application/json'
-    con nginx -> curl -X 'GET' 'http://localhost/api/services/marco' --header 'Content-Type: application/json'
-    """
-    services = sql_manager.get(username)
+# TODO: (General) -> Create tests for each endpoint && add the required checks in each endpoint
+
+@app.get("/{uuid}")
+def get(uuid: str): # TODO: Run and see how it works
+    services = sql_manager.get(uuid)
     if not services:
         raise HTTPException(status_code=404, detail="Services not found")
     return services
 
 @app.post("/create")
-def create_services(body: dict):
-    """
-    curl example to create a service:
-    sin nginx -> curl -X 'POST' 'http://localhost:8001/api/services/create' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
-    con nginx -> curl -X 'POST' 'http://localhost/api/services/create' --header 'Content-Type: application/json' --data-raw '{"username": "marco", "service_name": "Travel with Marco"}'
-    """
-    username = body.get("username")
-    service_name = body.get("service_name")
-    if None in [username, service_name]:
-        missing_fields = [field for field in REQUIRED_CREATE_FIELDS if body.get(field) is None]
-        raise HTTPException(status_code=400, detail=f"Missing fields: {missing_fields}")
-    if not sql_manager.insert(username, service_name):
-        raise HTTPException(status_code=400, detail="Service already exists for this account")
+def create(body: dict): # TODO: Run and see how it works
+    data = {key: value for key, value in body.items() if key in REQUIRED_CREATE_FIELDS or key in OPTIONAL_CREATE_FIELDS}
+
+    if not all([field in data for field in REQUIRED_CREATE_FIELDS]):
+        missing_fields = REQUIRED_CREATE_FIELDS - set(data.keys())
+        raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    
+    data.update({field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
+
+    uuid = sql_manager.insert(data["service_name"], data["provider_username"], data["description"], data["category"], data["price"])
+    if not uuid:
+        raise HTTPException(status_code=400, detail="Error creating service")
+    return {"status": "ok", "service_id": uuid}
+
+@app.delete("/{id}")
+def delete(id: str): # TODO: Run and see how it works
+    if not sql_manager.delete(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    return {"status": "ok"}
+
+@app.put("/{id}")
+def update(id: str, body: dict): # TODO: Run and see how it works
+    update = {key: value for key, value in body.items() if key in VALID_UPDATE_FIELDS}
+
+    not_valid_fields = set(update.keys()) - VALID_UPDATE_FIELDS
+    if not_valid_fields:
+        raise HTTPException(status_code=400, detail=f"Invalid fields: {', '.join(not_valid_fields)}")
+    
+    if not sql_manager.get(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    if not sql_manager.update(id, update):
+        raise HTTPException(status_code=400, detail="Error updating service")
     return {"status": "ok"}
