@@ -60,7 +60,7 @@ class Services:
                     category=category,
                     price=price,
                     hidden=False
-                ).returning(self.services.c.id)
+                ).returning(self.services.c.uuid)
                 result = session.execute(query)
                 session.commit()
                 inserted_id = result.scalar() # TODO: Check if this is the correct way to get the inserted id
@@ -74,16 +74,16 @@ class Services:
                 session.rollback()
                 return None
 
-    def get(self, uuid: str) -> Optional[List[Dict[str, str]]]:
+    def get(self, uuid: str) -> Optional[dict]:
         try:
             with self.engine.connect() as connection:
                 connection.execution_options(isolation_level="AUTOCOMMIT")
                 query = self.services.select().where(self.services.c.uuid == uuid)
                 result = connection.execute(query)
-                services = result.fetchall()
-                if services is None:
+                service = result.fetchone()
+                if service is None:
                     return None
-                return [service[0] for service in services]
+                return dict(service)
         except SQLAlchemyError as e:
             logger.error(f"SQLAlchemyError: {e}")
             return None
