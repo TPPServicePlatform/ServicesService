@@ -48,14 +48,14 @@ logger.info(f"Services API started in {starting_duration}")
 # TODO: (General) -> Create tests for each endpoint && add the required checks in each endpoint
 
 @app.get("/{uuid}")
-def get(uuid: str): # TODO: Run and see how it works
+def get(uuid: str):
     services = sql_manager.get(uuid)
     if not services:
-        raise HTTPException(status_code=404, detail="Services not found")
+        raise HTTPException(status_code=404, detail=f"Service with uuid '{uuid}' not found")
     return services
 
 @app.post("/create")
-def create(body: dict): # TODO: Run and see how it works
+def create(body: dict):
     data = {key: value for key, value in body.items() if key in REQUIRED_CREATE_FIELDS or key in OPTIONAL_CREATE_FIELDS}
 
     if not all([field in data for field in REQUIRED_CREATE_FIELDS]):
@@ -70,13 +70,13 @@ def create(body: dict): # TODO: Run and see how it works
     return {"status": "ok", "service_id": uuid}
 
 @app.delete("/{id}")
-def delete(id: str): # TODO: Run and see how it works
+def delete(id: str):
     if not sql_manager.delete(id):
         raise HTTPException(status_code=404, detail="Service not found")
     return {"status": "ok"}
 
 @app.put("/{id}")
-def update(id: str, body: dict): # TODO: Run and see how it works
+def update(id: str, body: dict):
     update = {key: value for key, value in body.items() if key in VALID_UPDATE_FIELDS}
 
     not_valid_fields = set(update.keys()) - VALID_UPDATE_FIELDS

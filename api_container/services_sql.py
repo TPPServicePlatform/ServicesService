@@ -1,10 +1,12 @@
 from typing import Optional, List, Dict
-from AccountsService.lib.utils import get_actual_time
+from lib.utils import get_actual_time
 from sqlalchemy import create_engine, MetaData, Table, Column, String
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from lib.utils import get_engine
 import logging as logger
 from sqlalchemy.orm import Session
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import text
 
 HOUR = 60 * 60
 MINUTE = 60
@@ -17,7 +19,7 @@ class Services:
     Services class that stores data in a db through sqlalchemy
     Fields:
     - id: int (unique) [pk]
-    - name (str): The name of the service
+    - service_name (str): The name of the service
     - provider_username (str): The username of the account that provides the service
     - description (str): The description of the service
     - created_at (datetime): The date when the service was created
@@ -37,8 +39,8 @@ class Services:
             self.services = Table(
                 'services',
                 metadata,
-                Column('uuid', String, primary_key=True, unique=True),
-                Column('name', String),
+                Column('uuid', UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()")),
+                Column('service_name', String),
                 Column('provider_username', String),
                 Column('description', String),
                 Column('created_at', String),
@@ -53,7 +55,7 @@ class Services:
         with Session(self.engine) as session:
             try:
                 query = self.services.insert().values(
-                    name=service_name,
+                    service_name=service_name,
                     provider_username=provider_username,
                     description=description,
                     created_at=get_actual_time(),
@@ -83,7 +85,7 @@ class Services:
                 service = result.fetchone()
                 if service is None:
                     return None
-                return dict(service)
+                return service._asdict()
         except SQLAlchemyError as e:
             logger.error(f"SQLAlchemyError: {e}")
             return None
