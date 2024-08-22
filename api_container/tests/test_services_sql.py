@@ -9,6 +9,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
 from services_sql import Services
 
+# Run with the following command:
+# pytest ServicesService/api_container/tests/test_services_sql.py
+
 # Set the TESTING environment variable
 os.environ['TESTING'] = '1'
 
