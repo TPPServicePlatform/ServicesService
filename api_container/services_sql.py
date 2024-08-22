@@ -1,12 +1,16 @@
 from typing import Optional, List, Dict
-from lib.utils import get_actual_time
 from sqlalchemy import create_engine, MetaData, Table, Column, String
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from lib.utils import get_engine
 import logging as logger
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import text
+import os
+import sys
+import uuid
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
+from lib.utils import get_actual_time, get_engine
 
 HOUR = 60 * 60
 MINUTE = 60
@@ -28,18 +32,28 @@ class Services:
     - hidden (bool): If the service is hidden or not
     """
 
-    def __init__(self):
-        self.engine = get_engine()
+    def __init__(self, engine=None):
+        self.engine = engine or get_engine()
         self.create_table()
         logger.getLogger('sqlalchemy.engine').setLevel(logger.DEBUG)
+        self.metadata = MetaData()
+        self.metadata.bind = self.engine
+        self.Session = sessionmaker(bind=self.engine)
 
     def create_table(self):
+        if self.engine.dialect.name == 'sqlite':
+            uuid_column = Column('uuid', String, primary_key=True, default=lambda: str(uuid.uuid4()))
+        else:
+            uuid_column = Column('uuid', UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()"))
+                
         with Session(self.engine) as session:
+            if self.engine.dialect.name != 'sqlite':
+                session.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\""))
             metadata = MetaData()
             self.services = Table(
                 'services',
                 metadata,
-                Column('uuid', UUID(as_uuid=True), primary_key=True, server_default=text("uuid_generate_v4()")),
+                uuid_column,
                 Column('service_name', String),
                 Column('provider_username', String),
                 Column('description', String),
@@ -64,8 +78,8 @@ class Services:
                     hidden=False
                 ).returning(self.services.c.uuid)
                 result = session.execute(query)
-                session.commit()
                 inserted_id = result.scalar() # TODO: Check if this is the correct way to get the inserted id
+                session.commit()
                 return inserted_id
             except IntegrityError as e:
                 logger.error(f"IntegrityError: {e}")
@@ -113,4 +127,3 @@ class Services:
                 session.rollback()
                 return False
         return True
-
