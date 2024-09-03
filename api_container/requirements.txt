@@ -2,5 +2,5 @@ python-dotenv
 fastapi
 uvicorn
 requests
-SQLAlchemy
-firebase-admin
+pymongo[srv]
+mongomock

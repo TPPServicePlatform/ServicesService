@@ -1,4 +1,5 @@
-from services_sql import Services
+from services_nosql import Services
+import mongomock
 import logging as logger
 import time
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException
@@ -41,8 +42,8 @@ app.add_middleware(
 )
 
 if os.getenv('TESTING'):
-    test_engine = get_test_engine()
-    sql_manager = Services(engine=test_engine)
+    client = mongomock.MongoClient()
+    sql_manager = Services(test_client=client)
 else:
     sql_manager = Services()
 
@@ -85,9 +86,11 @@ def delete(id: str):
 
 @app.put("/{id}")
 def update(id: str, body: dict):
+    logger.info(f"body: {body}")
     update = {key: value for key, value in body.items() if key in VALID_UPDATE_FIELDS}
-
-    not_valid_fields = set(update.keys()) - VALID_UPDATE_FIELDS
+    logger.info(f"update: {update}")
+    not_valid_fields = set(body.keys()) - VALID_UPDATE_FIELDS
+    logger.info(f"not_valid_fields: {not_valid_fields}")
     if not_valid_fields:
         raise HTTPException(status_code=400, detail=f"Invalid fields: {', '.join(not_valid_fields)}")
     

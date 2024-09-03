@@ -1,32 +1,36 @@
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import mongomock
 from unittest.mock import patch
 import sys
 import os
+from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from services_sql import Services
+from services_nosql import Services
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Run with the following command:
-# pytest ServicesService/api_container/tests/test_services_sql.py
+# pytest ServicesService/api_container/tests/test_services_nosql.py
 
 # Set the TESTING environment variable
 os.environ['TESTING'] = '1'
 
-# Set a default DATABASE_URL for testing
-os.environ['DATABASE_URL'] = 'sqlite:///test.db'
+# Set a default MONGO_TEST_DB for testing
+os.environ['MONGO_TEST_DB'] = 'test_db'
 
 @pytest.fixture(scope='module')
-def test_engine():
-    engine = create_engine('sqlite:///:memory:', echo=True)
-    yield engine
-    engine.dispose()
+def mongo_client():
+    client = mongomock.MongoClient()
+    yield client
+    client.drop_database(os.getenv('MONGO_TEST_DB'))
+    client.close()
 
 @pytest.fixture(scope='module')
-def services(test_engine):
-    return Services(engine=test_engine)
+def services(mongo_client):
+    return Services(test_client=mongo_client)
 
 def test_insert_service(services, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
@@ -85,3 +89,5 @@ def test_update_service(services, mocker):
     service = services.get(service_id)
     assert service['service_name'] == 'Updated Service'
     assert service['description'] == 'Updated Description'
+    assert service['provider_username'] == 'test_user'
+    
