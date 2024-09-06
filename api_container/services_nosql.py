@@ -74,15 +74,15 @@ class Services:
             logger.error(f"OperationFailure: {e}")
             return None
     
-    def get(self, uuid: str) -> Optional[dict]:
-        result = self.collection.find_one({'uuid': uuid})
-        if result:
-            result['_id'] = str(result['_id'])
-        return result
-    
     def delete(self, uuid: str) -> bool:
         result = self.collection.delete_one({'uuid': uuid})
         return result.deleted_count > 0
+
+    def get(self, uuid: str) -> Optional[dict]:
+        result = self.collection.find_one({'uuid': uuid})
+        if result and '_id' in result:
+            result['_id'] = str(result['_id'])
+        return result
     
     def update(self, uuid: str, data: dict) -> bool:
         try:
@@ -92,8 +92,8 @@ class Services:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
             return False
         
-    def search(self, keywords: List[str], provider_id: Optional[str], min_price: Optional[float], max_price: Optional[float], hidden: bool = False) -> Optional[List[dict]]:
-        query = {'hidden': hidden}
+    def search(self, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None) -> List[dict]:
+        query = {}
         
         if keywords and len(keywords) > 0:
             query['$or'] = [
@@ -110,6 +110,16 @@ class Services:
                 query['price']['$gte'] = min_price
             if max_price:
                 query['price']['$lte'] = max_price
-
-        return list(self.collection.find(query))
+        
+        if uuid:
+            query['uuid'] = uuid
+        
+        if hidden is not None:
+            query['hidden'] = hidden
+        
+        results = [dict(result) for result in self.collection.find(query)]
+        for result in results:
+            if '_id' in result:
+                result['_id'] = str(result['_id'])
+        return results or None
             
