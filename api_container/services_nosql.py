@@ -96,3 +96,14 @@ class Services:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
             return False
     
+    def search(self, keywords: List[str], min_price: Optional[float], max_price: Optional[float]) -> Optional[List[dict]]:
+        query = {
+            'service_name': {'$in': keywords},
+            'description': {'$in': keywords},
+            'price': {'$gte': min_price, '$lte': max_price}
+        }
+        result = self.collection.find(query)
+        if not result:
+            return None
+        return [service for service in result]
+    
