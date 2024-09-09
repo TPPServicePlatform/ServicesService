@@ -19,7 +19,7 @@ MILLISECOND = 1_000
 
 class Services:
     """
-    Services class that stores data in a db through sqlalchemy
+    Services class that stores data in a MongoDB collection.
     Fields:
     - id: int (unique) [pk]
     - service_name (str): The name of the service
@@ -76,9 +76,9 @@ class Services:
     
     def get(self, uuid: str) -> Optional[dict]:
         result = self.collection.find_one({'uuid': uuid})
-        if result:
+        if result and '_id' in result:
             result['_id'] = str(result['_id'])
-        return result
+        return dict(result) if result else None
     
     def delete(self, uuid: str) -> bool:
         result = self.collection.delete_one({'uuid': uuid})
@@ -86,11 +86,7 @@ class Services:
     
     def update(self, uuid: str, data: dict) -> bool:
         try:
-            logger.info(f"Updating service with uuid '{uuid}'")
-            logger.info(f"Data to update: {data}")
             result = self.collection.update_one({'uuid': uuid}, {'$set': data})
-            logger.info(f"Modified count: {result.modified_count}")
-            logger.info(f"Matched count: {result.matched_count}")
             return result.modified_count > 0
         except Exception as e:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
