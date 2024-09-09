@@ -16,7 +16,7 @@ os.environ['DATABASE_URL'] = 'sqlite:///test.db'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
 
-from services_api import app, sql_manager
+from services_api import app, services_manager
 
 
 client = TestClient(app)
@@ -24,10 +24,10 @@ client = TestClient(app)
 @pytest.fixture(scope='module', autouse=True)
 def setup_database():
     # Setup the database before running tests
-    sql_manager.create_table()
+    services_manager.create_table()
     yield
     # Teardown the database after running tests
-    sql_manager.engine.dispose()
+    services_manager.engine.dispose()
 
 def test_create_service():
     response = client.post("/create", json={
