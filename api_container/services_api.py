@@ -51,7 +51,7 @@ else:
     services_manager = Services()
     ratings_manager = Ratings()
 
-REQUIRED_CREATE_FIELDS = {"service_name", "provider_username", "category", "price"}
+REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price"}
 OPTIONAL_CREATE_FIELDS = {"description"}
 VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
 
@@ -59,13 +59,6 @@ starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
 
 # TODO: (General) -> Create tests for each endpoint && add the required checks in each endpoint
-
-@app.get("/{uuid}")
-def get(uuid: str):
-    services = services_manager.get(uuid)
-    if not services:
-        raise HTTPException(status_code=404, detail=f"Service with uuid '{uuid}' not found")
-    return services
 
 @app.post("/create")
 def create(body: dict):
@@ -77,7 +70,7 @@ def create(body: dict):
     
     data.update({field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
 
-    uuid = services_manager.insert(data["service_name"], data["provider_username"], data["description"], data["category"], data["price"])
+    uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"], data["category"], data["price"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
@@ -104,6 +97,17 @@ def update(id: str, body: dict):
     if not services_manager.update(id, update):
         raise HTTPException(status_code=400, detail="Error updating service")
     return {"status": "ok"}
+
+@app.get("/search")
+def search(keywords: Optional[str] = None, provider_id: Optional[str] = None, min_price: Optional[float] = None, max_price: Optional[float] = None, hidden: Optional[bool] = None, uuid: Optional[str] = None):
+    if keywords:
+        keywords = keywords.split(",")
+    if not any([keywords, provider_id, min_price, max_price, hidden, uuid]):
+        raise HTTPException(status_code=400, detail="No search parameters provided")
+    results = services_manager.search(keywords, provider_id, min_price, max_price, uuid, hidden)
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found")
+    return {"status": "ok", "results": results}
 
 @app.put("/{id}/reviews")
 def review(id: str, rating: int, comment: Optional[str], user_uuid: str):
