@@ -16,7 +16,7 @@ os.environ['MONGO_TEST_DB'] = 'test_db'
 # Add the necessary paths to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from services_api import app, services_manager
+from services_api import app, services_manager, ratings_manager
 
 @pytest.fixture(scope='module')
 def test_app():
@@ -177,3 +177,93 @@ def test_search_no_results(test_app, mocker):
     response = test_app.get("/search?keywords=Nonexistent Service")
     assert response.status_code == 404
     assert response.json()['detail'] == "No results found"
+
+def test_create_review(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 7',
+        provider_id='test_user_7',
+        description='Test Description 7',
+        category='Test Category 7',
+        price=700
+    )
+    response = test_app.put(f"/{service_id}/reviews", json={
+        'rating': 5,
+        'comment': 'Test Comment',
+        'user_uuid': 'test_user'
+    })
+    print(response.json())
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+    assert 'review_id' in response.json()
+
+def test_update_review(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 8',
+        provider_id='test_user_8',
+        description='Test Description 8',
+        category='Test Category 8',
+        price=800
+    )
+    review_id = ratings_manager.insert(service_id, 5, 'Test Comment', 'test_user')
+    response = test_app.put(f"/{service_id}/reviews", json={
+        'rating': 4,
+        'comment': 'Updated Comment',
+        'user_uuid': 'test_user'
+    })
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+    updated_review = ratings_manager.get(service_id, 'test_user')
+    assert updated_review['rating'] == 4
+    assert updated_review['comment'] == 'Updated Comment'
+
+def test_create_review_no_service(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = 'nonexistent_service'
+    response = test_app.put(f"/{service_id}/reviews", json={
+        'rating': 4,
+        'comment': 'Updated Comment',
+        'user_uuid': 'test_user'
+    })
+    assert response.status_code == 404
+    assert response.json()['detail'] == "Service not found"
+
+def test_delete_review(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 9',
+        provider_id='test_user_9',
+        description='Test Description 9',
+        category='Test Category 9',
+        price=900
+    )
+    _ = ratings_manager.insert(service_id, 5, 'Test Comment', 'test_user')
+    response = test_app.delete(f"/{service_id}/reviews", params={'user_uuid': 'test_user'})
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+
+def test_delete_review_no_service(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = 'nonexistent_service'
+    response = test_app.delete(f"/{service_id}/reviews", params={'user_uuid': 'test_user'})
+    assert response.status_code == 404
+    assert response.json()['detail'] == "Review not found"
+
+def test_get_all_reviews(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 10',
+        provider_id='test_user_10',
+        description='Test Description 10',
+        category='Test Category 10',
+        price=1000
+    )
+    _ = ratings_manager.insert(service_id, 5, 'Test Comment 1', 'test_user_1')
+    _ = ratings_manager.insert(service_id, 4, 'Test Comment 2', 'test_user_2')
+    response = test_app.get(f"/{service_id}/reviews")
+    assert response.status_code == 200
+    results = response.json()['reviews']
+    assert len(results) == 2
+    assert results[0]['comment'] == 'Test Comment 1'
+    assert results[1]['comment'] == 'Test Comment 2'

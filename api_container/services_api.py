@@ -54,6 +54,8 @@ else:
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price"}
 OPTIONAL_CREATE_FIELDS = {"description"}
 VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
+REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
+OPTIONAL_REVIEW_FIELDS = {"comment"}
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -110,34 +112,43 @@ def search(keywords: Optional[str] = None, provider_id: Optional[str] = None, mi
     return {"status": "ok", "results": results}
 
 @app.put("/{id}/reviews")
-def review(id: str, rating: int, comment: Optional[str], user_uuid: str):
+def review(id: str, body: dict):
+    data = {key: value for key, value in body.items() if key in REQUIRED_REVIEW_FIELDS or key in OPTIONAL_REVIEW_FIELDS}
+    
+    if not all([field in data for field in REQUIRED_REVIEW_FIELDS]):
+        missing_fields = REQUIRED_REVIEW_FIELDS - set(data.keys())
+        raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    
+    data.update({field: None for field in OPTIONAL_REVIEW_FIELDS if field not in data})
+    
     if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
     
-    older_review_uuid = ratings_manager.get_review(id, user_uuid).get("uuid", None)
+    older_review = ratings_manager.get(id, data["user_uuid"])
+    older_review_uuid = older_review.get("uuid", None) if older_review else None
     if older_review_uuid is not None:
-        if not ratings_manager.update(older_review_uuid, rating, comment):
+        if not ratings_manager.update(older_review_uuid, data["rating"], data["comment"]):
             raise HTTPException(status_code=400, detail="Error updating review")
         return {"status": "ok", "review_id": older_review_uuid}
     
-    review_uuid = ratings_manager.insert_review(id, rating, comment, user_uuid)
+    review_uuid = ratings_manager.insert(id, data["rating"], data["comment"], data["user_uuid"])
     if not review_uuid:
         raise HTTPException(status_code=400, detail="Error creating review")
     return {"status": "ok", "review_id": review_uuid}
 
 @app.delete("/{id}/reviews")
 def delete_review(id: str, user_uuid: str):
-    review = ratings_manager.get_review(id, user_uuid)
+    review = ratings_manager.get(id, user_uuid)
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
     
-    if not ratings_manager.delete_review(review["uuid"]):
+    if not ratings_manager.delete(review["uuid"]):
         raise HTTPException(status_code=400, detail="Error deleting review")
     return {"status": "ok"}
 
 @app.get("/{id}/reviews")
 def get_reviews(id: str):
-    reviews = ratings_manager.get_reviews(id)
+    reviews = ratings_manager.get_all(id)
     if not reviews:
         raise HTTPException(status_code=404, detail="Reviews not found")
     return {"status": "ok", "reviews": reviews}
