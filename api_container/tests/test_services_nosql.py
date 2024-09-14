@@ -9,9 +9,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
 from services_nosql import Services
 
-# Load environment variables from .env file
-load_dotenv()
-
 # Run with the following command:
 # pytest ServicesService/api_container/tests/test_services_nosql.py
 
@@ -21,14 +18,14 @@ os.environ['TESTING'] = '1'
 # Set a default MONGO_TEST_DB for testing
 os.environ['MONGO_TEST_DB'] = 'test_db'
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def mongo_client():
     client = mongomock.MongoClient()
     yield client
     client.drop_database(os.getenv('MONGO_TEST_DB'))
     client.close()
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def services(mongo_client):
     return Services(test_client=mongo_client)
 
