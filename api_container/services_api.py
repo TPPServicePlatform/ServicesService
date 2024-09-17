@@ -1,3 +1,4 @@
+from typing import Optional
 from services_nosql import Services
 import mongomock
 import logging as logger
@@ -9,7 +10,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import time_to_string, get_test_engine
+from lib.utils import time_to_string
 
 time_start = time.time()
 
@@ -43,11 +44,11 @@ app.add_middleware(
 
 if os.getenv('TESTING'):
     client = mongomock.MongoClient()
-    sql_manager = Services(test_client=client)
+    no_sql_manager = Services(test_client=client)
 else:
-    sql_manager = Services()
+    no_sql_manager = Services()
 
-REQUIRED_CREATE_FIELDS = {"service_name", "provider_username", "category", "price"}
+REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price"}
 OPTIONAL_CREATE_FIELDS = {"description"}
 VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
 
@@ -55,13 +56,6 @@ starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
 
 # TODO: (General) -> Create tests for each endpoint && add the required checks in each endpoint
-
-@app.get("/{uuid}")
-def get(uuid: str):
-    services = sql_manager.get(uuid)
-    if not services:
-        raise HTTPException(status_code=404, detail=f"Service with uuid '{uuid}' not found")
-    return services
 
 @app.post("/create")
 def create(body: dict):
@@ -73,14 +67,14 @@ def create(body: dict):
     
     data.update({field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
 
-    uuid = sql_manager.insert(data["service_name"], data["provider_username"], data["description"], data["category"], data["price"])
+    uuid = no_sql_manager.insert(data["service_name"], data["provider_id"], data["description"], data["category"], data["price"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
 
 @app.delete("/{id}")
 def delete(id: str):
-    if not sql_manager.delete(id):
+    if not no_sql_manager.delete(id):
         raise HTTPException(status_code=404, detail="Service not found")
     return {"status": "ok"}
 
@@ -94,9 +88,20 @@ def update(id: str, body: dict):
     if not_valid_fields:
         raise HTTPException(status_code=400, detail=f"Invalid fields: {', '.join(not_valid_fields)}")
     
-    if not sql_manager.get(id):
+    if not no_sql_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
     
-    if not sql_manager.update(id, update):
+    if not no_sql_manager.update(id, update):
         raise HTTPException(status_code=400, detail="Error updating service")
     return {"status": "ok"}
+
+@app.get("/search")
+def search(keywords: Optional[str] = None, provider_id: Optional[str] = None, min_price: Optional[float] = None, max_price: Optional[float] = None, hidden: Optional[bool] = None, uuid: Optional[str] = None):
+    if keywords:
+        keywords = keywords.split(",")
+    if not any([keywords, provider_id, min_price, max_price, hidden, uuid]):
+        raise HTTPException(status_code=400, detail="No search parameters provided")
+    results = no_sql_manager.search(keywords, provider_id, min_price, max_price, uuid, hidden)
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found")
+    return {"status": "ok", "results": results}
