@@ -29,6 +29,8 @@ class Services:
     - category (str): The category of the service
     - price (float): The price of the service
     - hidden (bool): If the service is hidden or not
+    - sum_rating (int): The sum of all ratings
+    - num_ratings (int): The number of ratings
     """
 
     def __init__(self, test_client=None):
@@ -64,7 +66,9 @@ class Services:
                 'created_at': get_actual_time(),
                 'category': category,
                 'price': price,
-                'hidden': False
+                'hidden': False,
+                'sum_rating': 0,
+                'num_ratings': 0
             })
             return str_uuid
         except DuplicateKeyError as e:
@@ -128,4 +132,12 @@ class Services:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
         return results or None
+
+    def update_rating(self, service_uuid: str, rating: int, sum: bool) -> bool:
+        service = self.get(service_uuid)
+        if not service:
+            return False
+        sum_rating = service['sum_rating'] + rating * (1 if sum else -1)
+        num_ratings = service['num_ratings'] + (1 if sum else -1)
+        return self.update(service_uuid, {'sum_rating': sum_rating, 'num_ratings': num_ratings})
             

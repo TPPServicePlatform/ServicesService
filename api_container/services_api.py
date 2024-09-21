@@ -134,6 +134,11 @@ def review(id: str, body: dict):
     review_uuid = ratings_manager.insert(id, data["rating"], data["comment"], data["user_uuid"])
     if not review_uuid:
         raise HTTPException(status_code=400, detail="Error creating review")
+    
+    if not services_manager.update_rating(id, data["rating"], True):
+        ratings_manager.delete(review_uuid)
+        raise HTTPException(status_code=400, detail="Error updating service rating")
+
     return {"status": "ok", "review_id": review_uuid}
 
 @app.delete("/{id}/reviews")
@@ -144,6 +149,8 @@ def delete_review(id: str, user_uuid: str):
     
     if not ratings_manager.delete(review["uuid"]):
         raise HTTPException(status_code=400, detail="Error deleting review")
+    
+    services_manager.update_rating(id, review["rating"], False)
     return {"status": "ok"}
 
 @app.get("/{id}/reviews")

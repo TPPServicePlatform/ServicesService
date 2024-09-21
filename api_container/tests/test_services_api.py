@@ -267,3 +267,86 @@ def test_get_all_reviews(test_app, mocker):
     assert len(results) == 2
     assert results[0]['comment'] == 'Test Comment 1'
     assert results[1]['comment'] == 'Test Comment 2'
+
+def test_create_review_updates_sum_rating_and_num_ratings(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 12',
+        provider_id='test_user_12',
+        description='Test Description 12',
+        category='Test Category 12',
+        price=1200
+    )
+    response = test_app.put(f"/{service_id}/reviews", json={
+        'rating': 5,
+        'comment': 'Test Comment',
+        'user_uuid': 'test_user'
+    })
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+    service = services_manager.get(service_id)
+    assert service['sum_rating'] == 5
+    assert service['num_ratings'] == 1
+
+def test_create_multiple_reviews_updates_sum_rating_and_num_ratings(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 14',
+        provider_id='test_user_14',
+        description='Test Description 14',
+        category='Test Category 14',
+        price=1400
+    )
+    response1 = test_app.put(f"/{service_id}/reviews", json={
+        'rating': 5,
+        'comment': 'Test Comment 1',
+        'user_uuid': 'test_user_1'
+    })
+    assert response1.status_code == 200
+    assert response1.json()['status'] == 'ok'
+    
+    response2 = test_app.put(f"/{service_id}/reviews", json={
+        'rating': 3,
+        'comment': 'Test Comment 2',
+        'user_uuid': 'test_user_2'
+    })
+    assert response2.status_code == 200
+    assert response2.json()['status'] == 'ok'
+    
+    service = services_manager.get(service_id)
+    assert service['sum_rating'] == 8
+    assert service['num_ratings'] == 2
+
+def test_delete_review_updates_sum_rating_and_num_ratings(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 16',
+        provider_id='test_user_16',
+        description='Test Description 16',
+        category='Test Category 16',
+        price=1600
+    )
+    review_id = ratings_manager.insert(service_id, 5, 'Test Comment', 'test_user')
+    services_manager.update_rating(service_id, 5, True)
+    
+    response = test_app.delete(f"/{service_id}/reviews", params={'user_uuid': 'test_user'})
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+    
+    service = services_manager.get(service_id)
+    assert service['sum_rating'] == 0
+    assert service['num_ratings'] == 0
+
+def test_delete_nonexistent_review(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 17',
+        provider_id='test_user_17',
+        description='Test Description 17',
+        category='Test Category 17',
+        price=1700
+    )
+    
+    response = test_app.delete(f"/{service_id}/reviews", params={'user_uuid': 'nonexistent_user'})
+    assert response.status_code == 404
+    assert response.json()['detail'] == "Review not found"
