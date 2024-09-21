@@ -102,7 +102,7 @@ class Services:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
             return False
         
-    def search(self, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None) -> List[dict]:
+    def search(self, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, min_rating: float = None) -> Optional[List[dict]]:
         query = {}
         
         if keywords and len(keywords) > 0:
@@ -126,6 +126,9 @@ class Services:
         
         if hidden is not None:
             query['hidden'] = hidden
+
+        if min_rating:
+            query['$expr'] = {'$gte': [{'$divide': ['$sum_rating', '$num_ratings']}, min_rating]}
         
         results = [dict(result) for result in self.collection.find(query)]
         for result in results:
