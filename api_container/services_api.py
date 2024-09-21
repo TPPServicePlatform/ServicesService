@@ -1,5 +1,6 @@
 from typing import Optional
 from services_nosql import Services
+from ratings_nosql import Ratings
 import mongomock
 import logging as logger
 import time
@@ -44,13 +45,17 @@ app.add_middleware(
 
 if os.getenv('TESTING'):
     client = mongomock.MongoClient()
-    no_sql_manager = Services(test_client=client)
+    services_manager = Services(test_client=client)
+    ratings_manager = Ratings(test_client=client)
 else:
-    no_sql_manager = Services()
+    services_manager = Services()
+    ratings_manager = Ratings()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price"}
 OPTIONAL_CREATE_FIELDS = {"description"}
 VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
+REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
+OPTIONAL_REVIEW_FIELDS = {"comment"}
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -67,14 +72,14 @@ def create(body: dict):
     
     data.update({field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
 
-    uuid = no_sql_manager.insert(data["service_name"], data["provider_id"], data["description"], data["category"], data["price"])
+    uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"], data["category"], data["price"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
 
 @app.delete("/{id}")
 def delete(id: str):
-    if not no_sql_manager.delete(id):
+    if not services_manager.delete(id):
         raise HTTPException(status_code=404, detail="Service not found")
     return {"status": "ok"}
 
@@ -88,10 +93,10 @@ def update(id: str, body: dict):
     if not_valid_fields:
         raise HTTPException(status_code=400, detail=f"Invalid fields: {', '.join(not_valid_fields)}")
     
-    if not no_sql_manager.get(id):
+    if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
     
-    if not no_sql_manager.update(id, update):
+    if not services_manager.update(id, update):
         raise HTTPException(status_code=400, detail="Error updating service")
     return {"status": "ok"}
 
@@ -101,7 +106,56 @@ def search(keywords: Optional[str] = None, provider_id: Optional[str] = None, mi
         keywords = keywords.split(",")
     if not any([keywords, provider_id, min_price, max_price, hidden, uuid]):
         raise HTTPException(status_code=400, detail="No search parameters provided")
-    results = no_sql_manager.search(keywords, provider_id, min_price, max_price, uuid, hidden)
+    results = services_manager.search(keywords, provider_id, min_price, max_price, uuid, hidden)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
+
+@app.put("/{id}/reviews")
+def review(id: str, body: dict):
+    data = {key: value for key, value in body.items() if key in REQUIRED_REVIEW_FIELDS or key in OPTIONAL_REVIEW_FIELDS}
+    
+    if not all([field in data for field in REQUIRED_REVIEW_FIELDS]):
+        missing_fields = REQUIRED_REVIEW_FIELDS - set(data.keys())
+        raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    
+    data.update({field: None for field in OPTIONAL_REVIEW_FIELDS if field not in data})
+    
+    if not services_manager.get(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    older_review = ratings_manager.get(id, data["user_uuid"])
+    older_review_uuid = older_review.get("uuid", None) if older_review else None
+    if older_review_uuid is not None:
+        if not ratings_manager.update(older_review_uuid, data["rating"], data["comment"]):
+            raise HTTPException(status_code=400, detail="Error updating review")
+        return {"status": "ok", "review_id": older_review_uuid}
+    
+    review_uuid = ratings_manager.insert(id, data["rating"], data["comment"], data["user_uuid"])
+    if not review_uuid:
+        raise HTTPException(status_code=400, detail="Error creating review")
+    
+    if not services_manager.update_rating(id, data["rating"], True):
+        ratings_manager.delete(review_uuid)
+        raise HTTPException(status_code=400, detail="Error updating service rating")
+
+    return {"status": "ok", "review_id": review_uuid}
+
+@app.delete("/{id}/reviews")
+def delete_review(id: str, user_uuid: str):
+    review = ratings_manager.get(id, user_uuid)
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    
+    if not ratings_manager.delete(review["uuid"]):
+        raise HTTPException(status_code=400, detail="Error deleting review")
+    
+    services_manager.update_rating(id, review["rating"], False)
+    return {"status": "ok"}
+
+@app.get("/{id}/reviews")
+def get_reviews(id: str):
+    reviews = ratings_manager.get_all(id)
+    if not reviews:
+        raise HTTPException(status_code=404, detail="Reviews not found")
+    return {"status": "ok", "reviews": reviews}
