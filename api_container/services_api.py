@@ -51,7 +51,8 @@ else:
     services_manager = Services()
     ratings_manager = Ratings()
 
-REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price"}
+REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price", "location", "max_distance"}
+REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
 OPTIONAL_CREATE_FIELDS = {"description"}
 VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
@@ -69,10 +70,21 @@ def create(body: dict):
     if not all([field in data for field in REQUIRED_CREATE_FIELDS]):
         missing_fields = REQUIRED_CREATE_FIELDS - set(data.keys())
         raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+
+    if not isinstance(data["location"], dict):
+        raise HTTPException(status_code=400, detail="Location must be a dictionary")
+
+    if not all([field in data["location"] for field in REQUIRED_LOCATION_FIELDS]):
+        missing_fields = REQUIRED_LOCATION_FIELDS - set(data["location"].keys())
+        raise HTTPException(status_code=400, detail=f"Missing location fields: {', '.join(missing_fields)}")
+    
+    extra_fields = set(data["location"].keys()) - REQUIRED_LOCATION_FIELDS
+    if extra_fields:
+        raise HTTPException(status_code=400, detail=f"Extra location fields: {', '.join(extra_fields)}")
     
     data.update({field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
 
-    uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"], data["category"], data["price"])
+    uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"], data["category"], data["price"], data["location"], data["max_distance"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
@@ -101,12 +113,14 @@ def update(id: str, body: dict):
     return {"status": "ok"}
 
 @app.get("/search")
-def search(keywords: Optional[str] = None, provider_id: Optional[str] = None, min_price: Optional[float] = None, max_price: Optional[float] = None, hidden: Optional[bool] = None, uuid: Optional[str] = None):
+def search(client_latitude: float, client_longitude: float, keywords: Optional[str] = None, provider_id: Optional[str] = None, min_price: Optional[float] = None, max_price: Optional[float] = None, hidden: Optional[bool] = None, uuid: Optional[str] = None):
     if keywords:
         keywords = keywords.split(",")
     if not any([keywords, provider_id, min_price, max_price, hidden, uuid]):
         raise HTTPException(status_code=400, detail="No search parameters provided")
-    results = services_manager.search(keywords, provider_id, min_price, max_price, uuid, hidden)
+    
+    client_location = {'longitude': client_longitude, 'latitude': client_latitude}
+    results = services_manager.search(client_location, keywords, provider_id, min_price, max_price, uuid, hidden)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}

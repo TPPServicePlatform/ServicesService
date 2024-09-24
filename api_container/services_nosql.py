@@ -31,6 +31,8 @@ class Services:
     - hidden (bool): If the service is hidden or not
     - sum_rating (int): The sum of all ratings
     - num_ratings (int): The number of ratings
+    - location (longitude and latitude): The address of the service
+    - max_distance (int): The maximum distance from the location (kilometers)
     """
 
     def __init__(self, test_client=None):
@@ -54,8 +56,9 @@ class Services:
 
     def _create_collection(self):
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
+        self.collection.create_index([('location', '2dsphere')])
     
-    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str) -> Optional[str]:
+    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
@@ -68,7 +71,9 @@ class Services:
                 'price': price,
                 'hidden': False,
                 'sum_rating': 0,
-                'num_ratings': 0
+                'num_ratings': 0,
+                'location': location,
+                'max_distance': max_distance
             })
             return str_uuid
         except DuplicateKeyError as e:
@@ -102,8 +107,19 @@ class Services:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
             return False
         
-    def search(self, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None) -> List[dict]:
+    def search(self, client_location: dict, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, test: bool = False) -> Optional[List[dict]]:
         query = {}
+
+        if not test:
+            query['location'] = {
+                '$near': {
+                '$geometry': {
+                    'type': 'Point',
+                    'coordinates': [client_location['longitude'], client_location['latitude']]
+                },
+                '$maxDistance': '$max_distance' * 1_000
+                }
+            }
         
         if keywords and len(keywords) > 0:
             query['$or'] = [
