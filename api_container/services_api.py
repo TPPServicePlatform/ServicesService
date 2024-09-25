@@ -101,12 +101,12 @@ def update(id: str, body: dict):
     return {"status": "ok"}
 
 @app.get("/search")
-def search(keywords: Optional[str] = None, provider_id: Optional[str] = None, min_price: Optional[float] = None, max_price: Optional[float] = None, hidden: Optional[bool] = None, uuid: Optional[str] = None):
+def search(keywords: Optional[str] = None, provider_id: Optional[str] = None, min_price: Optional[float] = None, max_price: Optional[float] = None, hidden: Optional[bool] = None, uuid: Optional[str] = None, min_avg_rating: Optional[float] = None):
     if keywords:
         keywords = keywords.split(",")
-    if not any([keywords, provider_id, min_price, max_price, hidden, uuid]):
+    if not any([keywords, provider_id, min_price, max_price, hidden, uuid, min_avg_rating]) and min_avg_rating != 0:
         raise HTTPException(status_code=400, detail="No search parameters provided")
-    results = services_manager.search(keywords, provider_id, min_price, max_price, uuid, hidden)
+    results = services_manager.search(keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
