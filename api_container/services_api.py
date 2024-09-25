@@ -120,12 +120,13 @@ def search(
     min_price: Optional[float] = Query(None),
     max_price: Optional[float] = Query(None),
     hidden: Optional[bool] = Query(None),
-    uuid: Optional[str] = Query(None)
+    uuid: Optional[str] = Query(None),
+    min_avg_rating: Optional[float] = Query(0.0)
 ):
     if keywords:
         keywords = keywords.split(",")
-    if not any([keywords, provider_id, min_price, max_price, hidden, uuid]):
-        raise HTTPException(status_code=400, detail="No search parameters provided")
+    # if not any([keywords, provider_id, min_price, max_price, hidden, uuid, min_avg_rating]) and min_avg_rating != 0:
+    #     raise HTTPException(status_code=400, detail="No search parameters provided")
 
     if not client_location:
         raise HTTPException(status_code=400, detail="Client location is required")
@@ -136,7 +137,7 @@ def search(
         raise HTTPException(status_code=400, detail="Invalid client location (must be in the format 'longitude,latitude')")
     client_location = {"longitude": float(client_location[0]), "latitude": float(client_location[1])}
 
-    results = services_manager.search(client_location, keywords, provider_id, min_price, max_price, uuid, hidden)
+    results = services_manager.search(client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
