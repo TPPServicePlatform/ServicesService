@@ -1,3 +1,4 @@
+import re
 from typing import Optional, Tuple
 from services_nosql import Services
 from ratings_nosql import Ratings
@@ -134,7 +135,7 @@ def search(
         raise HTTPException(status_code=400, detail="Invalid client location (must be in the format 'longitude,latitude')")
     client_location = client_location.split(",")
     if not all([is_float(value) for value in client_location]):
-        raise HTTPException(status_code=400, detail="Invalid client location (must be in the format 'longitude,latitude')")
+        raise HTTPException(status_code=400, detail="Invalid client location (each value must be a float)")
     client_location = {"longitude": float(client_location[0]), "latitude": float(client_location[1])}
 
     results = services_manager.search(client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
@@ -143,7 +144,8 @@ def search(
     return {"status": "ok", "results": results}
 
 def is_float(value):
-    return value.replace('.','',1).isdigit()
+    float_pattern = re.compile(r'^-?\d+(\.\d+)?$')
+    return bool(float_pattern.match(value))
 
 @app.put("/{id}/reviews")
 def review(id: str, body: dict):
