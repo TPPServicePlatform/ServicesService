@@ -31,16 +31,18 @@ class Services:
     - hidden (bool): If the service is hidden or not
     - sum_rating (int): The sum of all ratings
     - num_ratings (int): The number of ratings
+    - location (longitude and latitude): The address of the service
+    - max_distance (int): The maximum distance from the location (kilometers)
     """
 
-    def __init__(self, test_client=None):
+    def __init__(self, test_client=None, test_db=None):
         self.client = test_client or get_mongo_client()
         if not self._check_connection():
             raise Exception("Failed to connect to MongoDB")
         if test_client:
             self.db = self.client[os.getenv('MONGO_TEST_DB')]
         else:
-            self.db = self.client[os.getenv('MONGO_DB')]
+            self.db = self.client[test_db or os.getenv('MONGO_DB')]
         self.collection = self.db['services']
         self._create_collection()
     
@@ -54,8 +56,9 @@ class Services:
 
     def _create_collection(self):
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
+        self.collection.create_index([('location', '2dsphere')])
     
-    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str) -> Optional[str]:
+    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
@@ -68,7 +71,9 @@ class Services:
                 'price': price,
                 'hidden': False,
                 'sum_rating': 0,
-                'num_ratings': 0
+                'num_ratings': 0,
+                'location': {'type': 'Point', 'coordinates': [location['longitude'], location['latitude']]},
+                'max_distance': max_distance
             })
             return str_uuid
         except DuplicateKeyError as e:
@@ -101,36 +106,70 @@ class Services:
         except Exception as e:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
             return False
-        
-    def search(self, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, min_avg_rating: float = None) -> Optional[List[dict]]:
-        query = {}
-        
+
+    def search(self, client_location: dict, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, min_avg_rating: float = None) -> Optional[List[dict]]:
+        pipeline = []
+
+        if not os.environ.get('MONGOMOCK'):
+            geo_near_stage = {
+                '$geoNear': {
+                    'near': {
+                        'type': 'Point',
+                        'coordinates': [client_location['longitude'], client_location['latitude']]
+                    },
+                    'distanceField': 'distance',
+                    'spherical': True
+                }
+            }
+            pipeline.append(geo_near_stage)
+
+            match_stage = {
+                '$match': {
+                    '$expr': {
+                        '$lte': [
+                            '$distance',
+                            {'$multiply': ['$max_distance', 1000]} # Convert kilometers to meters
+                        ]
+                    }
+                }
+            }
+            pipeline.append(match_stage)
+
         if keywords and len(keywords) > 0:
-            query['$or'] = [
-                {'service_name': {'$in': keywords}},
-                {'description': {'$in': keywords}}
-            ]
-        
+            keyword_stage = {
+                '$match': {
+                    '$or': [
+                        {'service_name': {'$in': keywords}},
+                        {'description': {'$in': keywords}}
+                    ]
+                }
+            }
+            pipeline.append(keyword_stage)
+
         if provider_id:
-            query['provider_id'] = provider_id
-        
+            pipeline.append({'$match': {'provider_id': provider_id}})
+
         if min_price or max_price:
-            query['price'] = {}
+            price_query = {}
             if min_price:
-                query['price']['$gte'] = min_price
+                price_query['$gte'] = min_price
             if max_price:
-                query['price']['$lte'] = max_price
-        
+                price_query['$lte'] = max_price
+            pipeline.append({'$match': {'price': price_query}})
+
         if uuid:
-            query['uuid'] = uuid
-        
+            pipeline.append({'$match': {'uuid': uuid}})
+
         if hidden is not None:
-            query['hidden'] = hidden
+            pipeline.append({'$match': {'hidden': hidden}})
 
         if min_avg_rating:
-            query['$expr'] = {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}
+            # query['$expr'] = {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}
+            pipeline.append({'$match': {'$expr': {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}}})
 
-        results = [dict(result) for result in self.collection.find(query)]
+
+        results = [dict(result) for result in self.collection.aggregate(pipeline)]
+
         for result in results:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
