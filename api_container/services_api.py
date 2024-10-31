@@ -1,6 +1,7 @@
 import re
 from typing import Optional, Tuple
 from services_nosql import Services
+from rentals_nosql import Rentals
 from ratings_nosql import Ratings
 import mongomock
 import logging as logger
@@ -48,9 +49,11 @@ if os.getenv('TESTING'):
     client = mongomock.MongoClient()
     services_manager = Services(test_client=client)
     ratings_manager = Ratings(test_client=client)
+    rentals_manager = Rentals(test_client=client)
 else:
     services_manager = Services()
     ratings_manager = Ratings()
+    rentals_manager = Rentals()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price", "location", "max_distance"}
 REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
@@ -58,6 +61,9 @@ OPTIONAL_CREATE_FIELDS = {"description"}
 VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
 OPTIONAL_REVIEW_FIELDS = {"comment"}
+REQUIRED_RENTAL_FIELDS = {"service_uuid", "provider_uuid", "client_uuid", "start_date", "end_date", "location"}
+VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED"}
+DEFAULT_RENTAL_STATUS = "PENDING"
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -131,17 +137,21 @@ def search(
 
     if not client_location:
         raise HTTPException(status_code=400, detail="Client location is required")
+    client_location = _validate_location(client_location)
+
+    results = services_manager.search(client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found")
+    return {"status": "ok", "results": results}
+
+def _validate_location(client_location):
     if client_location.count(",") != 1:
         raise HTTPException(status_code=400, detail="Invalid client location (must be in the format 'longitude,latitude')")
     client_location = client_location.split(",")
     if not all([is_float(value) for value in client_location]):
         raise HTTPException(status_code=400, detail="Invalid client location (each value must be a float)")
     client_location = {"longitude": float(client_location[0]), "latitude": float(client_location[1])}
-
-    results = services_manager.search(client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
-    if not results:
-        raise HTTPException(status_code=404, detail="No results found")
-    return {"status": "ok", "results": results}
+    return client_location
 
 def is_float(value):
     float_pattern = re.compile(r'^-?\d+(\.\d+)?$')
@@ -195,3 +205,64 @@ def get_reviews(id: str):
     if not reviews:
         raise HTTPException(status_code=404, detail="Reviews not found")
     return {"status": "ok", "reviews": reviews}
+
+@app.post("/{id}/book")
+def book(id: str, body: dict):
+    data = {key: value for key, value in body.items() if key in REQUIRED_RENTAL_FIELDS}
+
+    if not all([field in data for field in REQUIRED_RENTAL_FIELDS]):
+        missing_fields = REQUIRED_RENTAL_FIELDS - set(data.keys())
+        raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    
+    extra_fields = set(data.keys()) - REQUIRED_RENTAL_FIELDS
+    if extra_fields:
+        raise HTTPException(status_code=400, detail=f"Extra fields: {', '.join(extra_fields)}")
+
+    if not services_manager.get(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    if not data["end_date"] > data["start_date"]:
+        raise HTTPException(status_code=400, detail="End date must be greater than start date")
+
+    client_location = _validate_location(data["location"])
+    rental_uuid = rentals_manager.insert(id, data["provider_uuid"], data["client_uuid"], data["start_date"], data["end_date"], client_location, DEFAULT_RENTAL_STATUS)
+    if not rental_uuid:
+        raise HTTPException(status_code=400, detail="Error creating rental")
+    return {"status": "ok", "rental_id": rental_uuid}
+
+@app.post("/{id}/book/{rental_id}")
+def update_booking(id: str, rental_id: str, new_status: str):
+    if new_status not in VALID_RENTAL_STATUS:
+        raise HTTPException(status_code=400, detail="Invalid status")
+
+    if new_status == DEFAULT_RENTAL_STATUS:
+        raise HTTPException(status_code=400, detail="Status must be different from the default")
+    
+    if not services_manager.get(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    if not rentals_manager.get(rental_id):
+        raise HTTPException(status_code=404, detail="Rental not found")
+    
+    if not rentals_manager.update(rental_id, new_status):
+        raise HTTPException(status_code=400, detail="Error updating rental")
+    return {"status": "ok"}
+
+@app.get("/bookings")
+def search_bookings(
+    rental_id: Optional[str] = Query(None),
+    service_id: Optional[str] = Query(None),
+    provider_id: Optional[str] = Query(None),
+    client_id: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    min_start_date: Optional[str] = Query(None),
+    max_start_date: Optional[str] = Query(None),
+    min_end_date: Optional[str] = Query(None),
+    max_end_date: Optional[str] = Query(None)
+):
+    start_date = {"MIN": min_start_date, "MAX": max_start_date}
+    end_date = {"MIN": min_end_date, "MAX": max_end_date}
+    results = rentals_manager.search(rental_id, service_id, provider_id, client_id, status, start_date, end_date)
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found")
+    return {"status": "ok", "results": results}
