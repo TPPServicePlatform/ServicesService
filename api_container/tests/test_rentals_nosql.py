@@ -33,9 +33,9 @@ def rentals(mongo_client):
 def test_insert_rental(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
@@ -46,27 +46,27 @@ def test_insert_rental(rentals, mocker):
 def test_search_rental(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
-    rentals = rentals.search(client_uuid='test_client')
+    rentals = rentals.search(client_id='test_client')
     assert rentals is not None
     rental = rentals[0]
     assert rental is not None
     assert rental['uuid'] == rental_id
-    assert rental['service_uuid'] == 'test_service'
+    assert rental['service_id'] == 'test_service'
 
 def test_update_rental(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
@@ -84,9 +84,9 @@ def test_update_rental(rentals, mocker):
 def test_delete_rental(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
@@ -97,108 +97,108 @@ def test_delete_rental(rentals, mocker):
     rental = rentals.search(rental_uuid=rental_id)
     assert rental is None
 
-def test_search_by_service_uuid(rentals, mocker):
+def test_search_by_service_id(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
-        service_uuid='wrong_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='wrong_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
-    rentals = rentals.search(service_uuid='test_service')
+    rentals = rentals.search(service_id='test_service')
     assert rentals is not None
     assert len(rentals) == 1
     rental = rentals[0]
     assert rental is not None
     assert rental['uuid'] == rental_id
-    assert rental['service_uuid'] == 'test_service'
+    assert rental['service_id'] == 'test_service'
     assert rental['uuid'] == rental_id
 
-def test_search_by_provider_uuid(rentals, mocker):
+def test_search_by_provider_id(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='wrong_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='wrong_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
-    rentals = rentals.search(provider_uuid='test_provider')
+    rentals = rentals.search(provider_id='test_provider')
     assert rentals is not None
     assert len(rentals) == 1
     rental = rentals[0]
     assert rental is not None
     assert rental['uuid'] == rental_id
-    assert rental['provider_uuid'] == 'test_provider'
+    assert rental['provider_id'] == 'test_provider'
     assert rental['uuid'] == rental_id
 
-def test_search_by_client_uuid(rentals, mocker):
+def test_search_by_client_id(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='wrong_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='wrong_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
-    rentals = rentals.search(client_uuid='test_client')
+    rentals = rentals.search(client_id='test_client')
     assert rentals is not None
     assert len(rentals) == 1
     rental = rentals[0]
     assert rental is not None
     assert rental['uuid'] == rental_id
-    assert rental['client_uuid'] == 'test_client'
+    assert rental['client_id'] == 'test_client'
     assert rental['uuid'] == rental_id
 
 def test_search_by_status(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
@@ -216,18 +216,18 @@ def test_search_by_status(rentals, mocker):
 def test_search_by_date_range(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-02 00:00:00',
         end_date='2023-01-03 00:00:00',
         location={'latitude': 0, 'longitude': 0},
@@ -245,37 +245,37 @@ def test_search_by_date_range(rentals, mocker):
 def test_search_by_multiple_criteria(rentals, mocker):
     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-01 00:00:00',
         end_date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
-        service_uuid='wrong_service',
-        provider_uuid='test_provider',
-        client_uuid='test_client',
+        service_id='wrong_service',
+        provider_id='test_provider',
+        client_id='test_client',
         start_date='2023-01-02 00:00:00',
         end_date='2023-01-03 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
-        service_uuid='test_service',
-        provider_uuid='wrong_provider',
-        client_uuid='test_client',
+        service_id='test_service',
+        provider_id='wrong_provider',
+        client_id='test_client',
         start_date='2023-01-02 00:00:00',
         end_date='2023-01-03 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
-    rentals = rentals.search(service_uuid='test_service', provider_uuid='test_provider')
+    rentals = rentals.search(service_id='test_service', provider_id='test_provider')
     assert rentals is not None
     assert len(rentals) == 1
     rental = rentals[0]
     assert rental is not None
     assert rental['uuid'] == rental_id
-    assert rental['service_uuid'] == 'test_service'
-    assert rental['provider_uuid'] == 'test_provider'
+    assert rental['service_id'] == 'test_service'
+    assert rental['provider_id'] == 'test_provider'

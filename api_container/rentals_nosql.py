@@ -22,9 +22,9 @@ class Rentals:
     Rentals class that stores data in a MongoDB collection.
     Rentals:
     - uuid: int (unique) [pk]
-    - service_uuid (str): The uuid of the service
-    - provider_uuid (str): The uuid of the provider user
-    - client_uuid (str): The uuid of the client user
+    - service_id (str): The uuid of the service
+    - provider_id (str): The uuid of the provider user
+    - client_id (str): The uuid of the client user
     - start_date (datetime): The start date of the rental
     - end_date (datetime): The end date of the rental
     - location (longitude and latitude): The address of where the service will be provided
@@ -54,17 +54,17 @@ class Rentals:
 
     def _create_collection(self):
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
-        self.collection.create_index([('provider_uuid', ASCENDING)])
-        self.collection.create_index([('client_uuid', ASCENDING)])
+        self.collection.create_index([('provider_id', ASCENDING)])
+        self.collection.create_index([('client_id', ASCENDING)])
     
-    def insert(self, service_uuid: str, provider_uuid: str, client_uuid: str, start_date: str, end_date: str, location: Dict, status: str) -> Optional[str]:
+    def insert(self, service_id: str, provider_id: str, client_id: str, start_date: str, end_date: str, location: Dict, status: str) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
                 'uuid': str_uuid,
-                'service_uuid': service_uuid,
-                'provider_uuid': provider_uuid,
-                'client_uuid': client_uuid,
+                'service_id': service_id,
+                'provider_id': provider_id,
+                'client_id': client_id,
                 'start_date': start_date,
                 'end_date': end_date,
                 'location': location,
@@ -80,25 +80,26 @@ class Rentals:
             logger.error(f"OperationFailure: {e}")
             return None
     
-    def search(self, rental_uuid: str = None, service_uuid: str = None, provider_uuid: str = None, client_uuid: str = None, status: str = None, start_date: Dict = None, end_date: Dict = None) -> Optional[List[Dict]]:
-        if not any([rental_uuid, service_uuid, provider_uuid, client_uuid, status, start_date, end_date]):
+    def get(self, uuid: str) -> Optional[Dict]:
+        result = self.collection.find_one({'uuid': uuid})
+        if result:
+            return dict(result)
+        return None
+
+    def search(self, rental_uuid: str = None, service_id: str = None, provider_id: str = None, client_id: str = None, status: str = None, start_date: Dict = None, end_date: Dict = None) -> Optional[List[Dict]]:
+        if not any([rental_uuid, service_id, provider_id, client_id, status, start_date, end_date]):
             return None
         
         pipeline = []
         if rental_uuid:
-            # pipeline.append({'uuid': rental_uuid})
             pipeline.append({'$match': {'uuid': rental_uuid}})
-        if service_uuid:
-            # pipeline.append({'service_uuid': service_uuid})
-            pipeline.append({'$match': {'service_uuid': service_uuid}})
-        if provider_uuid:
-            # pipeline.append({'provider_uuid': provider_uuid})
-            pipeline.append({'$match': {'provider_uuid': provider_uuid}})
-        if client_uuid:
-            # pipeline.append({'client_uuid': client_uuid})
-            pipeline.append({'$match': {'client_uuid': client_uuid}})
+        if service_id:
+            pipeline.append({'$match': {'service_id': service_id}})
+        if provider_id:
+            pipeline.append({'$match': {'provider_id': provider_id}})
+        if client_id:
+            pipeline.append({'$match': {'client_id': client_id}})
         if status:
-            # pipeline.append({'status': status})
             pipeline.append({'$match': {'status': status}})
 
         for range_date in [('start_date', start_date), ('end_date', end_date)]:
@@ -117,6 +118,10 @@ class Rentals:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
         return results or None
+    
+    def print_all(self):
+        for rental in self.collection.find():
+            print(rental)
 
     def delete(self, uuid: str) -> bool:
         result = self.collection.delete_one({'uuid': uuid})
