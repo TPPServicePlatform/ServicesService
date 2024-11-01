@@ -61,7 +61,7 @@ OPTIONAL_CREATE_FIELDS = {"description"}
 VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidden"}
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
 OPTIONAL_REVIEW_FIELDS = {"comment"}
-REQUIRED_RENTAL_FIELDS = {"service_uuid", "provider_uuid", "client_uuid", "start_date", "end_date", "location"}
+REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id", "start_date", "end_date", "location"}
 VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED"}
 DEFAULT_RENTAL_STATUS = "PENDING"
 
@@ -145,12 +145,20 @@ def search(
     return {"status": "ok", "results": results}
 
 def _validate_location(client_location):
-    if client_location.count(",") != 1:
-        raise HTTPException(status_code=400, detail="Invalid client location (must be in the format 'longitude,latitude')")
-    client_location = client_location.split(",")
-    if not all([is_float(value) for value in client_location]):
+    if type(client_location) == str:
+        if client_location.count(",") != 1:
+            raise HTTPException(status_code=400, detail="Invalid client location (must be in the format 'longitude,latitude')")
+        client_location = client_location.split(",")
+        client_location = {"longitude": client_location[0], "latitude": client_location[1]}
+    elif type(client_location) == dict:
+        if not all([field in client_location for field in REQUIRED_LOCATION_FIELDS]):
+            missing_fields = REQUIRED_LOCATION_FIELDS - set(client_location.keys())
+            raise HTTPException(status_code=400, detail=f"Missing location fields: {', '.join(missing_fields)}")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid client location (must be a string or a dictionary)")
+    if not all([type(value) in [int, float] or is_float(value) for value in client_location.values()]):
         raise HTTPException(status_code=400, detail="Invalid client location (each value must be a float)")
-    client_location = {"longitude": float(client_location[0]), "latitude": float(client_location[1])}
+    client_location = {key: float(value) for key, value in client_location.items()}
     return client_location
 
 def is_float(value):
@@ -225,13 +233,16 @@ def book(id: str, body: dict):
         raise HTTPException(status_code=400, detail="End date must be greater than start date")
 
     client_location = _validate_location(data["location"])
-    rental_uuid = rentals_manager.insert(id, data["provider_uuid"], data["client_uuid"], data["start_date"], data["end_date"], client_location, DEFAULT_RENTAL_STATUS)
+    rental_uuid = rentals_manager.insert(id, data["provider_id"], data["client_id"], data["start_date"], data["end_date"], client_location, DEFAULT_RENTAL_STATUS)
     if not rental_uuid:
         raise HTTPException(status_code=400, detail="Error creating rental")
     return {"status": "ok", "rental_id": rental_uuid}
 
-@app.post("/{id}/book/{rental_id}")
-def update_booking(id: str, rental_id: str, new_status: str):
+@app.put("/{id}/book/{rental_id}")
+def update_booking(id: str, rental_id: str, body: dict):
+    if "status" not in body:
+        raise HTTPException(status_code=400, detail="Missing status field")
+    new_status = body["status"]
     if new_status not in VALID_RENTAL_STATUS:
         raise HTTPException(status_code=400, detail="Invalid status")
 
