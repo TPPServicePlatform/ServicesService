@@ -17,7 +17,7 @@ os.environ['MONGO_TEST_DB'] = 'test_db'
 # Add the necessary paths to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from services_api import app, services_manager, ratings_manager
+from services_api import app, services_manager, ratings_manager, rentals_manager
 
 @pytest.fixture(scope='function')
 def test_app():
@@ -26,6 +26,7 @@ def test_app():
     # Teardown: clear the database after each test
     services_manager.collection.drop()
     ratings_manager.collection.drop()
+    rentals_manager.collection.drop()
 
 # def test_get_service(test_app, mocker):
 #     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
@@ -420,3 +421,75 @@ def test_delete_nonexistent_review(test_app, mocker):
     response = test_app.delete(f"/{service_id}/reviews", params={'user_uuid': 'nonexistent_user'})
     assert response.status_code == 404
     assert response.json()['detail'] == "Review not found"
+
+def test_book_a_service(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 18',
+        provider_id='test_user_18',
+        description='Test Description 18',
+        category='Test Category 18',
+        price=1800,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    response = test_app.post(f"/{service_id}/book", json={
+        'provider_id': 'test_user_18',
+        'client_id': 'test_user',
+        'start_date': '2023-01-01 00:00:00',
+        'end_date': '2023-01-02 00:00:00',
+        'location': {'latitude': 0, 'longitude': 0},
+    })
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+
+def test_book_a_service_no_service(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = 'nonexistent_service'
+    response = test_app.post(f"/{service_id}/book", json={
+        'provider_id': 'test_user_18',
+        'client_id': 'test_user',
+        'start_date': '2023-01-01 00:00:00',
+        'end_date': '2023-01-02 00:00:00',
+        'location': {'latitude': 0, 'longitude': 0},
+    })
+    assert response.status_code == 404
+    assert response.json()['detail'] == "Service not found"
+
+def test_search_booking_by_client_id(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 20',
+        provider_id='test_user_20',
+        description='Test Description 20',
+        category='Test Category 20',
+        price=2000,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    _ = rentals_manager.insert(service_id, 'test_user', 'test_user', '2023-01-01 00:00:00', '2023-01-02 00:00:00', {'latitude': 0, 'longitude': 0}, "PENDING")
+    response = test_app.get("/bookings?client_id=test_user")
+    assert response.status_code == 200
+    results = response.json()['results']
+    assert len(results) == 1
+    assert results[0]['service_id'] == service_id
+
+def test_update_booking_status(test_app, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services_manager.insert(
+        service_name='Test Service 21',
+        provider_id='test_user_21',
+        description='Test Description 21',
+        category='Test Category 21',
+        price=2100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    booking_id = rentals_manager.insert(service_id, 'test_user_21', 'test_user', '2023-01-01 00:00:00', '2023-01-02 00:00:00', {'latitude': 0, 'longitude': 0}, "PENDING")
+    response = test_app.put(f"/{service_id}/book/{booking_id}", json={
+        'status': 'FINISHED'
+    })
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+    updated_booking = rentals_manager.get(booking_id)
+    assert updated_booking['status'] == 'FINISHED'
