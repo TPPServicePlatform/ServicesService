@@ -137,12 +137,12 @@ class Services:
 
         if keywords and len(keywords) > 0:
             keyword_stage = {
-                '$match': {
-                    '$or': [
-                        {'service_name': {'$in': keywords}},
-                        {'description': {'$in': keywords}}
-                    ]
-                }
+            '$match': {
+                '$or': [
+                {'service_name': {'$regex': '|'.join(keywords), '$options': 'i'}},
+                {'description': {'$regex': '|'.join(keywords), '$options': 'i'}}
+                ]
+            }
             }
             pipeline.append(keyword_stage)
 
