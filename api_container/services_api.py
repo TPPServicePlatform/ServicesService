@@ -13,7 +13,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import time_to_string
+from lib.utils import time_to_string, validate_location, verify_fields
 
 time_start = time.time()
 
@@ -64,6 +64,7 @@ OPTIONAL_REVIEW_FIELDS = {"comment"}
 REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id", "start_date", "end_date", "location"}
 VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED"}
 DEFAULT_RENTAL_STATUS = "PENDING"
+REQUIRED_ADDITIONAL_FIELDS = {"name", "provider_id", "description", "price"}
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -74,20 +75,22 @@ logger.info(f"Services API started in {starting_duration}")
 def create(body: dict):
     data = {key: value for key, value in body.items() if key in REQUIRED_CREATE_FIELDS or key in OPTIONAL_CREATE_FIELDS}
 
-    if not all([field in data for field in REQUIRED_CREATE_FIELDS]):
-        missing_fields = REQUIRED_CREATE_FIELDS - set(data.keys())
-        raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    # if not all([field in data for field in REQUIRED_CREATE_FIELDS]):
+    #     missing_fields = REQUIRED_CREATE_FIELDS - set(data.keys())
+    #     raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    verify_fields(REQUIRED_CREATE_FIELDS, OPTIONAL_CREATE_FIELDS, data)
 
     if not isinstance(data["location"], dict):
         raise HTTPException(status_code=400, detail="Location must be a dictionary")
 
-    if not all([field in data["location"] for field in REQUIRED_LOCATION_FIELDS]):
-        missing_fields = REQUIRED_LOCATION_FIELDS - set(data["location"].keys())
-        raise HTTPException(status_code=400, detail=f"Missing location fields: {', '.join(missing_fields)}")
+    # if not all([field in data["location"] for field in REQUIRED_LOCATION_FIELDS]):
+    #     missing_fields = REQUIRED_LOCATION_FIELDS - set(data["location"].keys())
+    #     raise HTTPException(status_code=400, detail=f"Missing location fields: {', '.join(missing_fields)}")
+    verify_fields(REQUIRED_LOCATION_FIELDS, set(), data["location"])
 
-    extra_fields = set(data["location"].keys()) - REQUIRED_LOCATION_FIELDS
-    if extra_fields:
-        raise HTTPException(status_code=400, detail=f"Extra location fields: {', '.join(extra_fields)}")
+    # extra_fields = set(data["location"].keys()) - REQUIRED_LOCATION_FIELDS
+    # if extra_fields:
+    #     raise HTTPException(status_code=400, detail=f"Extra location fields: {', '.join(extra_fields)}")
 
     data.update({field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
 
@@ -106,11 +109,12 @@ def delete(id: str):
 def update(id: str, body: dict):
     logger.info(f"body: {body}")
     update = {key: value for key, value in body.items() if key in VALID_UPDATE_FIELDS}
-    logger.info(f"update: {update}")
-    not_valid_fields = set(body.keys()) - VALID_UPDATE_FIELDS
-    logger.info(f"not_valid_fields: {not_valid_fields}")
-    if not_valid_fields:
-        raise HTTPException(status_code=400, detail=f"Invalid fields: {', '.join(not_valid_fields)}")
+    # logger.info(f"update: {update}")
+    # not_valid_fields = set(body.keys()) - VALID_UPDATE_FIELDS
+    # logger.info(f"not_valid_fields: {not_valid_fields}")
+    # if not_valid_fields:
+    #     raise HTTPException(status_code=400, detail=f"Invalid fields: {', '.join(not_valid_fields)}")
+    verify_fields(set(), VALID_UPDATE_FIELDS, body)
 
     if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
@@ -137,41 +141,21 @@ def search(
 
     if not client_location:
         raise HTTPException(status_code=400, detail="Client location is required")
-    client_location = _validate_location(client_location)
+    client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
 
     results = services_manager.search(client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
 
-def _validate_location(client_location):
-    if type(client_location) == str:
-        if client_location.count(",") != 1:
-            raise HTTPException(status_code=400, detail="Invalid client location (must be in the format 'longitude,latitude')")
-        client_location = client_location.split(",")
-        client_location = {"longitude": client_location[0], "latitude": client_location[1]}
-    elif type(client_location) == dict:
-        if not all([field in client_location for field in REQUIRED_LOCATION_FIELDS]):
-            missing_fields = REQUIRED_LOCATION_FIELDS - set(client_location.keys())
-            raise HTTPException(status_code=400, detail=f"Missing location fields: {', '.join(missing_fields)}")
-    else:
-        raise HTTPException(status_code=400, detail="Invalid client location (must be a string or a dictionary)")
-    if not all([type(value) in [int, float] or is_float(value) for value in client_location.values()]):
-        raise HTTPException(status_code=400, detail="Invalid client location (each value must be a float)")
-    client_location = {key: float(value) for key, value in client_location.items()}
-    return client_location
-
-def is_float(value):
-    float_pattern = re.compile(r'^-?\d+(\.\d+)?$')
-    return bool(float_pattern.match(value))
-
 @app.put("/{id}/reviews")
 def review(id: str, body: dict):
     data = {key: value for key, value in body.items() if key in REQUIRED_REVIEW_FIELDS or key in OPTIONAL_REVIEW_FIELDS}
 
-    if not all([field in data for field in REQUIRED_REVIEW_FIELDS]):
-        missing_fields = REQUIRED_REVIEW_FIELDS - set(data.keys())
-        raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    # if not all([field in data for field in REQUIRED_REVIEW_FIELDS]):
+    #     missing_fields = REQUIRED_REVIEW_FIELDS - set(data.keys())
+    #     raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    verify_fields(REQUIRED_REVIEW_FIELDS, OPTIONAL_REVIEW_FIELDS, data)
 
     data.update({field: None for field in OPTIONAL_REVIEW_FIELDS if field not in data})
 
@@ -218,13 +202,14 @@ def get_reviews(id: str):
 def book(id: str, body: dict):
     data = {key: value for key, value in body.items() if key in REQUIRED_RENTAL_FIELDS}
 
-    if not all([field in data for field in REQUIRED_RENTAL_FIELDS]):
-        missing_fields = REQUIRED_RENTAL_FIELDS - set(data.keys())
-        raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
+    # if not all([field in data for field in REQUIRED_RENTAL_FIELDS]):
+    #     missing_fields = REQUIRED_RENTAL_FIELDS - set(data.keys())
+    #     raise HTTPException(status_code=400, detail=f"Missing fields: {', '.join(missing_fields)}")
     
-    extra_fields = set(data.keys()) - REQUIRED_RENTAL_FIELDS
-    if extra_fields:
-        raise HTTPException(status_code=400, detail=f"Extra fields: {', '.join(extra_fields)}")
+    # extra_fields = set(data.keys()) - REQUIRED_RENTAL_FIELDS
+    # if extra_fields:
+    #     raise HTTPException(status_code=400, detail=f"Extra fields: {', '.join(extra_fields)}")
+    verify_fields(REQUIRED_RENTAL_FIELDS, set(), data)
 
     if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
@@ -232,7 +217,7 @@ def book(id: str, body: dict):
     if not data["end_date"] > data["start_date"]:
         raise HTTPException(status_code=400, detail="End date must be greater than start date")
 
-    client_location = _validate_location(data["location"])
+    client_location = validate_location(data["location"], REQUIRED_LOCATION_FIELDS)
     rental_uuid = rentals_manager.insert(id, data["provider_id"], data["client_id"], data["start_date"], data["end_date"], client_location, DEFAULT_RENTAL_STATUS)
     if not rental_uuid:
         raise HTTPException(status_code=400, detail="Error creating rental")
@@ -277,3 +262,4 @@ def search_bookings(
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
+
