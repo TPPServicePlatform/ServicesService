@@ -271,7 +271,7 @@ def get_additionals_by_provider(provider_id: str):
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
 
-@app.put("/additionals/{service_id}/{additional_id}")
+@app.put("/additionals/{additional_id}/add/{service_id}")
 def add_additional_to_service(service_id: str, additional_id: str):
     if not services_manager.get(service_id):
         raise HTTPException(status_code=404, detail="Service not found")
@@ -283,7 +283,7 @@ def add_additional_to_service(service_id: str, additional_id: str):
         raise HTTPException(status_code=400, detail="Error adding additional to service")
     return {"status": "ok"}
 
-@app.delete("/additionals/{service_id}/{additional_id}")
+@app.delete("/additionals/{additional_id}/delete/{service_id}")
 def remove_additional_from_service(service_id: str, additional_id: str):
     if not services_manager.get(service_id):
         raise HTTPException(status_code=404, detail="Service not found")
@@ -295,7 +295,7 @@ def remove_additional_from_service(service_id: str, additional_id: str):
         raise HTTPException(status_code=400, detail="Error removing additional from service")
     return {"status": "ok"}
 
-@app.get("/additionals/{service_id}")
+@app.get("/additionals/service/{service_id}")
 def get_service_additionals(service_id: str):
     results = services_manager.get_additionals(service_id)
     if not results:
