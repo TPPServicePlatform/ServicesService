@@ -178,26 +178,26 @@ class Services:
         num_ratings = service['num_ratings'] + (1 if sum else -1)
         return self.update(service_uuid, {'sum_rating': sum_rating, 'num_ratings': num_ratings})
             
-    def get_additional_ids(self, service_uuid: str) -> List[str]:
+    def get_additionals(self, service_uuid: str) -> List[str]:
         service = self.get(service_uuid)
         if not service:
             return []
         return service.get('additional_ids', [])
     
-    def add_additional_id(self, service_uuid: str, additional_id: str) -> bool:
+    def add_additional(self, service_uuid: str, additional_id: str) -> bool:
         service = self.get(service_uuid)
         if not service:
             return False
-        additional_ids = self.get_additional_ids(service_uuid)
+        additional_ids = self.get_additionals(service_uuid)
         if additional_id in set(additional_ids):
             return True
         return self.update(service_uuid, {'additional_ids': additional_ids + [additional_id]})
     
-    def remove_additional_id(self, service_uuid: str, additional_id: str) -> bool:
+    def remove_additional(self, service_uuid: str, additional_id: str) -> bool:
         service = self.get(service_uuid)
         if not service:
             return False
-        additional_ids = set(self.get_additional_ids(service_uuid))
+        additional_ids = set(self.get_additionals(service_uuid))
         if additional_id not in additional_ids:
             return True
         return self.update(service_uuid, {'additional_ids': list(additional_ids - {additional_id})})

@@ -210,7 +210,7 @@ def test_get_additional_ids(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    additional_ids = services.get_additional_ids(service_id)
+    additional_ids = services.get_additionals(service_id)
     assert additional_ids == []
 
 def test_add_additional_id(services, mocker):
@@ -224,9 +224,9 @@ def test_add_additional_id(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    result = services.add_additional_id(service_id, 'additional_id_1')
+    result = services.add_additional(service_id, 'additional_id_1')
     assert result is True
-    additional_ids = services.get_additional_ids(service_id)
+    additional_ids = services.get_additionals(service_id)
     assert 'additional_id_1' in additional_ids
 
 def test_remove_additional_id(services, mocker):
@@ -240,8 +240,8 @@ def test_remove_additional_id(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    services.add_additional_id(service_id, 'additional_id_1')
-    result = services.remove_additional_id(service_id, 'additional_id_1')
+    services.add_additional(service_id, 'additional_id_1')
+    result = services.remove_additional(service_id, 'additional_id_1')
     assert result is True
-    additional_ids = services.get_additional_ids(service_id)
+    additional_ids = services.get_additionals(service_id)
     assert 'additional_id_1' not in additional_ids

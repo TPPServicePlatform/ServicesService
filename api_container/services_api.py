@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 from services_nosql import Services
 from rentals_nosql import Rentals
 from ratings_nosql import Ratings
+from additionals_nosql import Additionals
 import mongomock
 import logging as logger
 import time
@@ -50,10 +51,12 @@ if os.getenv('TESTING'):
     services_manager = Services(test_client=client)
     ratings_manager = Ratings(test_client=client)
     rentals_manager = Rentals(test_client=client)
+    additionals_manager = Additionals(test_client=client)
 else:
     services_manager = Services()
     ratings_manager = Ratings()
     rentals_manager = Rentals()
+    additionals_manager = Additionals()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price", "location", "max_distance"}
 REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
@@ -65,6 +68,7 @@ REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id", "start_date", "end_date", 
 VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED"}
 DEFAULT_RENTAL_STATUS = "PENDING"
 REQUIRED_ADDITIONAL_FIELDS = {"name", "provider_id", "description", "price"}
+VALID_UPDATE_ADDITIONAL_FIELDS = {"name", "description", "price"}
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -232,3 +236,69 @@ def search_bookings(
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
 
+@app.post("/additionals/create")
+def create_additional(body: dict):
+    data = {key: value for key, value in body.items() if key in REQUIRED_ADDITIONAL_FIELDS}
+    verify_fields(REQUIRED_ADDITIONAL_FIELDS, set(), data)
+
+    uuid = additionals_manager.insert(data["name"], data["provider_id"], data["description"], data["price"])
+    if not uuid:
+        raise HTTPException(status_code=400, detail="Error creating additional")
+    return {"status": "ok", "additional_id": uuid}
+
+@app.put("/additionals/{additional_id}")
+def update_additional(additional_id: str, body: dict):
+    update = {key: value for key, value in body.items() if key in VALID_UPDATE_ADDITIONAL_FIELDS}
+    verify_fields(set(), VALID_UPDATE_ADDITIONAL_FIELDS, body)
+
+    if not additionals_manager.get(additional_id):
+        raise HTTPException(status_code=404, detail="Additional not found")
+
+    if not additionals_manager.update(additional_id, update):
+        raise HTTPException(status_code=400, detail="Error updating additional")
+    return {"status": "ok"}
+
+@app.delete("/additionals/{additional_id}")
+def delete_additional(additional_id: str):
+    if not additionals_manager.delete(additional_id):
+        raise HTTPException(status_code=404, detail="Additional not found")
+    return {"status": "ok"}
+
+@app.get("/additionals/provider/{provider_id}")
+def get_additionals_by_provider(provider_id: str):
+    results = additionals_manager.get_by_provider(provider_id)
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found")
+    return {"status": "ok", "results": results}
+
+@app.put("/additionals/{service_id}/{additional_id}")
+def add_additional_to_service(service_id: str, additional_id: str):
+    if not services_manager.get(service_id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    if not additionals_manager.get(additional_id):
+        raise HTTPException(status_code=404, detail="Additional not found")
+
+    if not services_manager.add_additional(service_id, additional_id):
+        raise HTTPException(status_code=400, detail="Error adding additional to service")
+    return {"status": "ok"}
+
+@app.delete("/additionals/{service_id}/{additional_id}")
+def remove_additional_from_service(service_id: str, additional_id: str):
+    if not services_manager.get(service_id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    
+    if not additionals_manager.get(additional_id):
+        raise HTTPException(status_code=404, detail="Additional not found")
+
+    if not services_manager.remove_additional(service_id, additional_id):
+        raise HTTPException(status_code=400, detail="Error removing additional from service")
+    return {"status": "ok"}
+
+@app.get("/additionals/{service_id}")
+def get_service_additionals(service_id: str):
+    results = services_manager.get_additionals(service_id)
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found")
+    additionals = [additionals_manager.get(additional_id) for additional_id in results]
+    return {"status": "ok", "results": additionals}
