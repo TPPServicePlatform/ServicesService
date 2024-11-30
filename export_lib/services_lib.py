@@ -1,6 +1,6 @@
 from typing import Optional
-from api_container.rentals_nosql import Rentals
-from api_container.services_nosql import Services
+from lib.exportable_rentals_nosql import Rentals
+from lib.exportable_services_nosql import Services
 
 class ServicesLib:
     def __init__(self, test_client=None):
