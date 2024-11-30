@@ -72,7 +72,7 @@ def test_update_rental(rentals, mocker):
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
-    rentals.update(rental_id, status='ACCEPTED')
+    rentals.update_status(rental_id, status='ACCEPTED')
     rental = rentals.search(rental_uuid=rental_id)
     print("rental: ", rental)
     assert rental is not None

@@ -33,6 +33,8 @@ class Services:
     - location (longitude and latitude): The address of the service
     - max_distance (int): The maximum distance from the location (kilometers)
     - additional_ids (list): The ids of the additional services
+    - created_at (datetime): The date when the service was created
+    - updated_at (datetime): The date when the service was updated
     """
 
     def __init__(self, test_client=None, test_db=None):
@@ -74,7 +76,9 @@ class Services:
                 'num_ratings': 0,
                 'location': {'type': 'Point', 'coordinates': [location['longitude'], location['latitude']]},
                 'max_distance': max_distance,
-                'additional_ids': []
+                'additional_ids': [],
+                'created_at': get_actual_time(),
+                'updated_at': get_actual_time()
             })
             return str_uuid
         except DuplicateKeyError as e:
@@ -95,6 +99,7 @@ class Services:
         return result.deleted_count > 0
     
     def update(self, uuid: str, data: dict) -> bool:
+        data['updated_at'] = get_actual_time()
         try:
             result = self.collection.update_one({'uuid': uuid}, {'$set': data})
             return result.modified_count > 0
@@ -176,7 +181,7 @@ class Services:
             return False
         sum_rating = service['sum_rating'] + rating * (1 if sum else -1)
         num_ratings = service['num_ratings'] + (1 if sum else -1)
-        return self.update(service_uuid, {'sum_rating': sum_rating, 'num_ratings': num_ratings})
+        return self.update(service_uuid, {'sum_rating': sum_rating, 'num_ratings': num_ratings, 'updated_at': get_actual_time()})
             
     def get_additionals(self, service_uuid: str) -> List[str]:
         service = self.get(service_uuid)
@@ -191,7 +196,7 @@ class Services:
         additional_ids = self.get_additionals(service_uuid)
         if additional_id in set(additional_ids):
             return True
-        return self.update(service_uuid, {'additional_ids': additional_ids + [additional_id]})
+        return self.update(service_uuid, {'additional_ids': additional_ids + [additional_id], 'updated_at': get_actual_time()})
     
     def remove_additional(self, service_uuid: str, additional_id: str) -> bool:
         service = self.get(service_uuid)
@@ -200,4 +205,16 @@ class Services:
         additional_ids = set(self.get_additionals(service_uuid))
         if additional_id not in additional_ids:
             return True
-        return self.update(service_uuid, {'additional_ids': list(additional_ids - {additional_id})})
+        return self.update(service_uuid, {'additional_ids': list(additional_ids - {additional_id}), 'updated_at': get_actual_time()})
+    
+    def ratings_by_provider(self, provider_id: str) -> Optional[List[Dict]]:
+        results = self.collection.aggregate([
+            {'$match': {'provider_id': provider_id}},
+            {'$group': {'_id': provider_id, 'sum_rating': {'$sum': '$sum_rating'}, 'num_ratings': {'$sum': '$num_ratings'}, 'count': {'$sum': 1}, 'provider_id': {'$first': '$provider_id'}}}
+        ])
+        results = [dict(result) for result in results]
+        for result in results:
+            print(result)
+            if '_id' in result:
+                result['_id'] = str(result['_id'])
+        return results[0] or None

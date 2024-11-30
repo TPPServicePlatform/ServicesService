@@ -1,3 +1,6 @@
+# Imported libraries
+/imported_lib/
+
 # DS_Store files
 *.DS_Store
 
@@ -17,7 +20,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/

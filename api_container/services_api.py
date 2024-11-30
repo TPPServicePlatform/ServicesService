@@ -65,10 +65,13 @@ VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidd
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
 OPTIONAL_REVIEW_FIELDS = {"comment"}
 REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id", "start_date", "end_date", "location"}
+OPTIONAL_RENTAL_FIELDS = {"additionals"}
 VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED"}
 DEFAULT_RENTAL_STATUS = "PENDING"
 REQUIRED_ADDITIONAL_FIELDS = {"name", "provider_id", "description", "price"}
 VALID_UPDATE_ADDITIONAL_FIELDS = {"name", "description", "price"}
+MIN_RATING = 1 # stars
+MAX_RATING = 5 # stars
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -149,6 +152,9 @@ def review(id: str, body: dict):
         if not ratings_manager.update(older_review_uuid, data["rating"], data["comment"]):
             raise HTTPException(status_code=400, detail="Error updating review")
         return {"status": "ok", "review_id": older_review_uuid}
+    
+    if not MIN_RATING <= data["rating"] <= MAX_RATING:
+        raise HTTPException(status_code=400, detail=f"Rating must be between {MIN_RATING} and {MAX_RATING}")
 
     review_uuid = ratings_manager.insert(id, data["rating"], data["comment"], data["user_uuid"])
     if not review_uuid:
@@ -181,8 +187,8 @@ def get_reviews(id: str):
 
 @app.post("/{id}/book")
 def book(id: str, body: dict):
-    data = {key: value for key, value in body.items() if key in REQUIRED_RENTAL_FIELDS}
-    verify_fields(REQUIRED_RENTAL_FIELDS, set(), data)
+    data = {key: value for key, value in body.items() if key in REQUIRED_RENTAL_FIELDS or key in OPTIONAL_RENTAL_FIELDS}
+    verify_fields(REQUIRED_RENTAL_FIELDS, OPTIONAL_RENTAL_FIELDS, data)
 
     if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
@@ -191,7 +197,8 @@ def book(id: str, body: dict):
         raise HTTPException(status_code=400, detail="End date must be greater than start date")
 
     client_location = validate_location(data["location"], REQUIRED_LOCATION_FIELDS)
-    rental_uuid = rentals_manager.insert(id, data["provider_id"], data["client_id"], data["start_date"], data["end_date"], client_location, DEFAULT_RENTAL_STATUS)
+    additionals = data.get("additionals", [])
+    rental_uuid = rentals_manager.insert(id, data["provider_id"], data["client_id"], data["start_date"], data["end_date"], client_location, DEFAULT_RENTAL_STATUS, additionals)
     if not rental_uuid:
         raise HTTPException(status_code=400, detail="Error creating rental")
     return {"status": "ok", "rental_id": rental_uuid}
@@ -213,7 +220,7 @@ def update_booking(id: str, rental_id: str, body: dict):
     if not rentals_manager.get(rental_id):
         raise HTTPException(status_code=404, detail="Rental not found")
     
-    if not rentals_manager.update(rental_id, new_status):
+    if not rentals_manager.update_status(rental_id, new_status):
         raise HTTPException(status_code=400, detail="Error updating rental")
     return {"status": "ok"}
 
@@ -234,6 +241,11 @@ def search_bookings(
     results = rentals_manager.search(rental_id, service_id, provider_id, client_id, status, start_date, end_date)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
+    
+    for result in results:
+        if "additionals" in result:
+            additionals = [additionals_manager.get(additional_id)["additional_name"] for additional_id in result["additionals"]]
+            result["additionals"] = additionals
     return {"status": "ok", "results": results}
 
 @app.post("/additionals/create")
