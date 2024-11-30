@@ -198,3 +198,50 @@ def test_search_by_hidden_status(services, mocker):
     results = services.search(client_location={'latitude': 0, 'longitude': 0}, hidden=False)
     assert len(results) == 1
     assert results[0]['service_name'] == 'Test Service 2'
+
+def test_get_additional_ids(services, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services.insert(
+        service_name='Test Service',
+        provider_id='test_user',
+        description='Test Description',
+        category='Test Category',
+        price=100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    additional_ids = services.get_additionals(service_id)
+    assert additional_ids == []
+
+def test_add_additional_id(services, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services.insert(
+        service_name='Test Service',
+        provider_id='test_user',
+        description='Test Description',
+        category='Test Category',
+        price=100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    result = services.add_additional(service_id, 'additional_id_1')
+    assert result is True
+    additional_ids = services.get_additionals(service_id)
+    assert 'additional_id_1' in additional_ids
+
+def test_remove_additional_id(services, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    service_id = services.insert(
+        service_name='Test Service',
+        provider_id='test_user',
+        description='Test Description',
+        category='Test Category',
+        price=100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    services.add_additional(service_id, 'additional_id_1')
+    result = services.remove_additional(service_id, 'additional_id_1')
+    assert result is True
+    additional_ids = services.get_additionals(service_id)
+    assert 'additional_id_1' not in additional_ids

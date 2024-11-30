@@ -16,7 +16,6 @@ MINUTE = 60
 MILLISECOND = 1_000
 
 # TODO: (General) -> Create tests for each method && add the required checks in each method
-
 class Services:
     """
     Services class that stores data in a MongoDB collection.
@@ -33,6 +32,7 @@ class Services:
     - num_ratings (int): The number of ratings
     - location (longitude and latitude): The address of the service
     - max_distance (int): The maximum distance from the location (kilometers)
+    - additional_ids (list): The ids of the additional services
     """
 
     def __init__(self, test_client=None, test_db=None):
@@ -73,7 +73,8 @@ class Services:
                 'sum_rating': 0,
                 'num_ratings': 0,
                 'location': {'type': 'Point', 'coordinates': [location['longitude'], location['latitude']]},
-                'max_distance': max_distance
+                'max_distance': max_distance,
+                'additional_ids': []
             })
             return str_uuid
         except DuplicateKeyError as e:
@@ -92,12 +93,6 @@ class Services:
     def delete(self, uuid: str) -> bool:
         result = self.collection.delete_one({'uuid': uuid})
         return result.deleted_count > 0
-
-    def get(self, uuid: str) -> Optional[dict]:
-        result = self.collection.find_one({'uuid': uuid})
-        if result and '_id' in result:
-            result['_id'] = str(result['_id'])
-        return result
     
     def update(self, uuid: str, data: dict) -> bool:
         try:
@@ -183,3 +178,26 @@ class Services:
         num_ratings = service['num_ratings'] + (1 if sum else -1)
         return self.update(service_uuid, {'sum_rating': sum_rating, 'num_ratings': num_ratings})
             
+    def get_additionals(self, service_uuid: str) -> List[str]:
+        service = self.get(service_uuid)
+        if not service:
+            return []
+        return service.get('additional_ids', [])
+    
+    def add_additional(self, service_uuid: str, additional_id: str) -> bool:
+        service = self.get(service_uuid)
+        if not service:
+            return False
+        additional_ids = self.get_additionals(service_uuid)
+        if additional_id in set(additional_ids):
+            return True
+        return self.update(service_uuid, {'additional_ids': additional_ids + [additional_id]})
+    
+    def remove_additional(self, service_uuid: str, additional_id: str) -> bool:
+        service = self.get(service_uuid)
+        if not service:
+            return False
+        additional_ids = set(self.get_additionals(service_uuid))
+        if additional_id not in additional_ids:
+            return True
+        return self.update(service_uuid, {'additional_ids': list(additional_ids - {additional_id})})

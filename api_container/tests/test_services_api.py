@@ -17,7 +17,7 @@ os.environ['MONGO_TEST_DB'] = 'test_db'
 # Add the necessary paths to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from services_api import app, services_manager, ratings_manager, rentals_manager
+from services_api import app, services_manager, ratings_manager, rentals_manager, additionals_manager
 
 @pytest.fixture(scope='function')
 def test_app():
@@ -27,6 +27,7 @@ def test_app():
     services_manager.collection.drop()
     ratings_manager.collection.drop()
     rentals_manager.collection.drop()
+    additionals_manager.collection.drop()
 
 # def test_get_service(test_app, mocker):
 #     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
@@ -493,3 +494,126 @@ def test_update_booking_status(test_app, mocker):
     assert response.json()['status'] == 'ok'
     updated_booking = rentals_manager.get(booking_id)
     assert updated_booking['status'] == 'FINISHED'
+
+def test_create_additional(test_app, mocker):
+    body = {
+        "name": "New Additional",
+        "provider_id": "provider_1",
+        "description": "New Additional Description",
+        "price": 50
+    }
+    response = test_app.post("/additionals/create", json=body)
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+    assert 'additional_id' in response.json()
+
+def test_update_additional(test_app, mocker):
+    additional_id = additionals_manager.insert(
+        name="Additional",
+        provider_id="provider_1",
+        description="Description",
+        price=50
+    )
+    update_data = {
+        "name": "Updated Additional",
+        "description": "Updated Description"
+    }
+    response = test_app.put(f"/additionals/{additional_id}", json=update_data)
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+    updated_additional = additionals_manager.get(additional_id)
+    assert updated_additional['name'] == 'Updated Additional'
+    assert updated_additional['description'] == 'Updated Description'
+
+def test_delete_additional(test_app, mocker):
+    additional_id = additionals_manager.insert(
+        name="Additional",
+        provider_id="provider_1",
+        description="Description",
+        price=50
+    )
+    response = test_app.delete(f"/additionals/{additional_id}")
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+
+def test_get_additionals_by_provider(test_app, mocker):
+    additionals_manager.insert(
+        name="Additional 1",
+        provider_id="provider_1",
+        description="Description 1",
+        price=50
+    )
+    additionals_manager.insert(
+        name="Additional 2",
+        provider_id="provider_1",
+        description="Description 2",
+        price=60
+    )
+    response = test_app.get("/additionals/provider/provider_1")
+    assert response.status_code == 200
+    results = response.json()['results']
+    assert len(results) == 2
+
+def test_add_additional_to_service(test_app, mocker):
+    service_id = services_manager.insert(
+        service_name="Service",
+        provider_id="provider_1",
+        description="Service Description",
+        category="Category",
+        price=100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    additional_id = additionals_manager.insert(
+        name="Additional",
+        provider_id="provider_1",
+        description="Description",
+        price=50
+    )
+    response = test_app.put(f"/additionals/{additional_id}/add/{service_id}")
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+
+def test_remove_additional_from_service(test_app, mocker):
+    service_id = services_manager.insert(
+        service_name="Service",
+        provider_id="provider_1",
+        description="Service Description",
+        category="Category",
+        price=100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    additional_id = additionals_manager.insert(
+        name="Additional",
+        provider_id="provider_1",
+        description="Description",
+        price=50
+    )
+    services_manager.add_additional(service_id, additional_id)
+    response = test_app.delete(f"/additionals/{additional_id}/delete/{service_id}")
+    assert response.status_code == 200
+    assert response.json()['status'] == 'ok'
+
+def test_get_service_additionals(test_app, mocker):
+    service_id = services_manager.insert(
+        service_name="Service",
+        provider_id="provider_1",
+        description="Service Description",
+        category="Category",
+        price=100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    additional_id = additionals_manager.insert(
+        name="Additional",
+        provider_id="provider_1",
+        description="Description",
+        price=50
+    )
+    services_manager.add_additional(service_id, additional_id)
+    response = test_app.get(f"/additionals/service/{service_id}")
+    assert response.status_code == 200
+    results = response.json()['results']
+    assert len(results) == 1
+    assert results[0]['additional_name'] == 'Additional'
