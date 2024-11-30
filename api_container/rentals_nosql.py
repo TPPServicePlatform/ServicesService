@@ -136,11 +136,3 @@ class Rentals:
         except Exception as e:
             logger.error(f"Error updating rental with uuid '{uuid}': {e}")
             return False
-    
-    def update_additionals(self, uuid: str, additionals: List[str]) -> bool:
-        try:
-            result = self.collection.update_one({'uuid': uuid}, {'$set': {'additionals': additionals, 'updated_at': get_actual_time()}})
-            return result.modified_count > 0
-        except Exception as e:
-            logger.error(f"Error updating rental with uuid '{uuid}': {e}")
-            return False
