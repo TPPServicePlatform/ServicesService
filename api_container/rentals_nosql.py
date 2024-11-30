@@ -23,6 +23,7 @@ class Rentals:
     Rentals:
     - uuid: int (unique) [pk]
     - service_id (str): The uuid of the service
+    - additionals (List[str]): The list of uuids of the additionals
     - provider_id (str): The uuid of the provider user
     - client_id (str): The uuid of the client user
     - start_date (datetime): The start date of the rental
@@ -57,12 +58,13 @@ class Rentals:
         self.collection.create_index([('provider_id', ASCENDING)])
         self.collection.create_index([('client_id', ASCENDING)])
     
-    def insert(self, service_id: str, provider_id: str, client_id: str, start_date: str, end_date: str, location: Dict, status: str) -> Optional[str]:
+    def insert(self, service_id: str, provider_id: str, client_id: str, start_date: str, end_date: str, location: Dict, status: str, additionals: List[str] = []) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
                 'uuid': str_uuid,
                 'service_id': service_id,
+                'additionals': additionals,
                 'provider_id': provider_id,
                 'client_id': client_id,
                 'start_date': start_date,
@@ -127,9 +129,17 @@ class Rentals:
         result = self.collection.delete_one({'uuid': uuid})
         return result.deleted_count > 0
     
-    def update(self, uuid: str, status: str) -> bool:
+    def update_status(self, uuid: str, status: str) -> bool:
         try:
             result = self.collection.update_one({'uuid': uuid}, {'$set': {'status': status, 'updated_at': get_actual_time()}})
+            return result.modified_count > 0
+        except Exception as e:
+            logger.error(f"Error updating rental with uuid '{uuid}': {e}")
+            return False
+    
+    def update_additionals(self, uuid: str, additionals: List[str]) -> bool:
+        try:
+            result = self.collection.update_one({'uuid': uuid}, {'$set': {'additionals': additionals, 'updated_at': get_actual_time()}})
             return result.modified_count > 0
         except Exception as e:
             logger.error(f"Error updating rental with uuid '{uuid}': {e}")

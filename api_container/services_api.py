@@ -213,7 +213,7 @@ def update_booking(id: str, rental_id: str, body: dict):
     if not rentals_manager.get(rental_id):
         raise HTTPException(status_code=404, detail="Rental not found")
     
-    if not rentals_manager.update(rental_id, new_status):
+    if not rentals_manager.update_status(rental_id, new_status):
         raise HTTPException(status_code=400, detail="Error updating rental")
     return {"status": "ok"}
 
