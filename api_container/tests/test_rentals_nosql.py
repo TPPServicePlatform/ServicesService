@@ -279,3 +279,22 @@ def test_search_by_multiple_criteria(rentals, mocker):
     assert rental['uuid'] == rental_id
     assert rental['service_id'] == 'test_service'
     assert rental['provider_id'] == 'test_provider'
+
+def test_update_additionals(rentals, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    rental_id = rentals.insert(
+        service_id='test_service',
+        provider_id='test_provider',
+        client_id='test_client',
+        start_date='2023-01-01 00:00:00',
+        end_date='2023-01-02 00:00:00',
+        location={'latitude': 0, 'longitude': 0},
+        status='PENDING'
+    )
+    additionals = ['GPS', 'Child Seat']
+    result = rentals.update_additionals(rental_id, additionals)
+    assert result is True
+    rental = rentals.search(rental_uuid=rental_id)
+    assert rental is not None
+    rental = rental[0]
+    assert rental['additionals'] == additionals
