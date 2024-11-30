@@ -206,3 +206,15 @@ class Services:
         if additional_id not in additional_ids:
             return True
         return self.update(service_uuid, {'additional_ids': list(additional_ids - {additional_id}), 'updated_at': get_actual_time()})
+    
+    def ratings_by_provider(self, provider_id: str) -> Optional[List[Dict]]:
+        results = self.collection.aggregate([
+            {'$match': {'provider_id': provider_id}},
+            {'$group': {'_id': provider_id, 'sum_rating': {'$sum': '$sum_rating'}, 'num_ratings': {'$sum': '$num_ratings'}, 'count': {'$sum': 1}, 'provider_id': {'$first': '$provider_id'}}}
+        ])
+        results = [dict(result) for result in results]
+        for result in results:
+            print(result)
+            if '_id' in result:
+                result['_id'] = str(result['_id'])
+        return results[0] or None

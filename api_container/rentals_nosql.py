@@ -136,3 +136,9 @@ class Rentals:
         except Exception as e:
             logger.error(f"Error updating rental with uuid '{uuid}': {e}")
             return False
+    
+    def total_rentals(self, provider_id: str) -> int:
+        return self.collection.count_documents({'provider_id': provider_id})
+    
+    def finished_rentals(self, provider_id: str) -> int:
+        return self.collection.count_documents({'provider_id': provider_id, 'status': 'FINISHED'})

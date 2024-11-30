@@ -245,3 +245,37 @@ def test_remove_additional_id(services, mocker):
     assert result is True
     additional_ids = services.get_additionals(service_id)
     assert 'additional_id_1' not in additional_ids
+
+def test_ratings_by_provider(services, mocker):
+    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    services.insert(
+        service_name='Test Service 1',
+        provider_id='test_user_1',
+        description='Test Description 1',
+        category='Test Category 1',
+        price=100,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    services.insert(
+        service_name='Test Service 2',
+        provider_id='test_user_1',
+        description='Test Description 2',
+        category='Test Category 2',
+        price=200,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    services.insert(
+        service_name='Test Service 3',
+        provider_id='test_user_2',
+        description='Test Description 3',
+        category='Test Category 3',
+        price=300,
+        location={'latitude': 0, 'longitude': 0},
+        max_distance=100
+    )
+    results = services.ratings_by_provider('test_user_1')
+    print(results)
+    assert results["count"] == 2
+    assert results['provider_id'] == 'test_user_1'

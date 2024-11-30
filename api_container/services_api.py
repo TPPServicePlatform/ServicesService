@@ -70,6 +70,8 @@ VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED
 DEFAULT_RENTAL_STATUS = "PENDING"
 REQUIRED_ADDITIONAL_FIELDS = {"name", "provider_id", "description", "price"}
 VALID_UPDATE_ADDITIONAL_FIELDS = {"name", "description", "price"}
+MIN_RATING = 1 # stars
+MAX_RATING = 5 # stars
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -150,6 +152,9 @@ def review(id: str, body: dict):
         if not ratings_manager.update(older_review_uuid, data["rating"], data["comment"]):
             raise HTTPException(status_code=400, detail="Error updating review")
         return {"status": "ok", "review_id": older_review_uuid}
+    
+    if not MIN_RATING <= data["rating"] <= MAX_RATING:
+        raise HTTPException(status_code=400, detail=f"Rating must be between {MIN_RATING} and {MAX_RATING}")
 
     review_uuid = ratings_manager.insert(id, data["rating"], data["comment"], data["user_uuid"])
     if not review_uuid:
