@@ -3,7 +3,7 @@ from pymongo import ASCENDING
 import logging as logger
 import os
 import sys
-from utils import get_mongo_client
+from imported_lib.ServicesService.lib.utils import get_mongo_client
 
 HOUR = 60 * 60
 MINUTE = 60

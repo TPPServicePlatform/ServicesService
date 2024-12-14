@@ -1,6 +1,6 @@
 from typing import Optional
-from lib.exportable_rentals_nosql import Rentals
-from lib.exportable_services_nosql import Services
+from imported_lib.ServicesService.lib.exportable_rentals_nosql import Rentals
+from imported_lib.ServicesService.lib.exportable_services_nosql import Services
 
 class ServicesLib:
     def __init__(self, test_client=None):
