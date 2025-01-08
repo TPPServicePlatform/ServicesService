@@ -325,8 +325,19 @@ def get_service_additionals(service_id: str):
     return {"status": "ok", "results": additionals}
 
 @app.get("/trending")
-def get_trending_services(max_services: int, offset: int = 0):
-    recent_ratings = ratings_manager.get_recent(TRENDING_TIME)
+def get_trending_services(
+    max_services: int,
+    offset: int = 0,
+    client_location: str = Query(...),
+    ):
+    if not client_location:
+        raise HTTPException(status_code=400, detail="Client location is required")
+    client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
+    all_available_services = [service["uuid"] for service in services_manager.search(client_location, hidden=False)]
+    if not all_available_services:
+        raise HTTPException(status_code=404, detail="No services found")
+    
+    recent_ratings = ratings_manager.get_recent(TRENDING_TIME, all_available_services)
     ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in recent_ratings]  
     last_update = __GLOBAL__trending[TRENDING_LAST_UPDATE] # date (YYYY-MM-DD)
     today = time.strftime("%Y-%m-%d", time.gmtime())
