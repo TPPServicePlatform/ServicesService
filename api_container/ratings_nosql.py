@@ -95,11 +95,12 @@ class Ratings:
         return result.modified_count > 0
     
     def get_recent(self, max_delta_days: int, available_services: List[str]) -> Optional[list[dict]]:
-        result = self.collection.find([
-            {'updated_at': {'$gte': get_time_past_days(max_delta_days)}},
-            {'service_uuid': {'$in': available_services}},
-            {'$project': {'user_uuid': 1, 'service_uuid': 1, 'rating': 1}}
-        ])
+        query = {'updated_at': {'$gte': get_time_past_days(max_delta_days)},
+                 'service_uuid': {'$in': available_services}}
+        projection = {'user_uuid': 1, 'service_uuid': 1, 'rating': 1}
+        
+        result = self.collection.find(query, projection)
         if not result:
             return None
+        
         return [dict(rating) for rating in result]

@@ -346,16 +346,16 @@ def get_trending_services(
         _update_trending_data(ratings_list, today)
     
     trending_services = __GLOBAL__trending[TRENDING_SERVICES][offset:offset+max_services]
-    remaining_services = len(__GLOBAL__trending[TRENDING_SERVICES]) - (offset + max_services)
+    remaining_services = max(len(__GLOBAL__trending[TRENDING_SERVICES]) - (offset + max_services), 0)
     return {"status": "ok", "results": trending_services, "remaining_services": remaining_services}
 
 def _update_trending_data(reviews_list, today):
     trending_services = TrendingAnaliser(reviews_list).get_services_rank()
-    avg_reviews = sum([service[1] for service in trending_services.values()]) / len(trending_services)
+    avg_reviews = sum([service["REVIEWS_COUNT"] for service in trending_services.values()]) / len(trending_services)
     min_reviews = avg_reviews * TRENDING_MIN_REVIEWS
 
-    filtered_services = {service: score for service, score in trending_services.items() if score[1] >= min_reviews}
-    trending_services = sorted(filtered_services.items(), key=operator.itemgetter(1), reverse=True)
+    filtered_services = {service: data for service, data in trending_services.items() if data["REVIEWS_COUNT"] >= min_reviews}
+    trending_services = sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
 
     __GLOBAL__trending[TRENDING_SERVICES] = trending_services
     __GLOBAL__trending[TRENDING_LAST_UPDATE] = today

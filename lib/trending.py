@@ -20,5 +20,5 @@ class TrendingAnaliser:
     
     def get_services_rank(self) -> List[str]:
         page_rank = nx.pagerank(self.bipartite_graph)
-        return {service: (page_rank[service], self.services[service]) for service in page_rank}
+        return {service: {"TRENDING_SCORE": page_rank[service], "REVIEWS_COUNT": self.services[service]} for service in self.services if service in page_rank}
         
