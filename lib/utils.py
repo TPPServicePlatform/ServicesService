@@ -8,6 +8,7 @@ from pymongo.server_api import ServerApi
 import logging as logger
 import re
 
+DAY = 24 * 60 * 60
 HOUR = 60 * 60
 MINUTE = 60
 MILLISECOND = 1_000
@@ -56,3 +57,6 @@ def verify_fields(required_fields: set, optional_fields: set, data: dict):
     if not all(field in required_fields.union(optional_fields) for field in data.keys()):
         invalid_fields = set(data.keys()) - required_fields.union(optional_fields)
         raise Exception(f"Invalid fields: {', '.join(invalid_fields)}")
+    
+def get_time_past_days(days: int) -> str:
+    return datetime.datetime.fromtimestamp(time.time() - days * DAY).strftime('%Y-%m-%d %H:%M:%S')

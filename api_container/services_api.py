@@ -326,12 +326,13 @@ def get_service_additionals(service_id: str):
 
 @app.get("/trending")
 def get_trending_services(max_services: int, offset: int = 0):
-    reviews_list = []
+    recent_ratings = ratings_manager.get_recent(TRENDING_TIME)
+    ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in recent_ratings]  
     last_update = __GLOBAL__trending[TRENDING_LAST_UPDATE] # date (YYYY-MM-DD)
     today = time.strftime("%Y-%m-%d", time.gmtime())
 
     if not last_update or last_update != today:
-        _update_trending_data(reviews_list, today)
+        _update_trending_data(ratings_list, today)
     
     trending_services = __GLOBAL__trending[TRENDING_SERVICES][offset:offset+max_services]
     remaining_services = len(__GLOBAL__trending[TRENDING_SERVICES]) - (offset + max_services)

@@ -9,7 +9,7 @@ import sys
 import uuid
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import get_actual_time, get_mongo_client
+from lib.utils import get_actual_time, get_mongo_client, get_time_past_days
 
 HOUR = 60 * 60
 MINUTE = 60
@@ -93,3 +93,12 @@ class Ratings:
                                                 'updated_at': get_actual_time()
                                             }})
         return result.modified_count > 0
+    
+    def get_recent(self, max_delta_days: int) -> Optional[list[dict]]:
+        result = self.collection.aggregate([
+            {'$match': {'updated_at': {'$gte': get_time_past_days(max_delta_days)}}},
+            {'$project': {'user_uuid': 1, 'service_uuid': 1, 'rating': 1}}
+        ])
+        if not result:
+            return None
+        return [dict(rating) for rating in result]
