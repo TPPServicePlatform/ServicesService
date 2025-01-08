@@ -1,3 +1,4 @@
+import operator
 import re
 from typing import Optional, Tuple
 from services_nosql import Services
@@ -15,6 +16,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
 from lib.utils import time_to_string, validate_location, verify_fields
+from lib.trending import TrendingAnaliser
 
 time_start = time.time()
 
@@ -73,8 +75,15 @@ VALID_UPDATE_ADDITIONAL_FIELDS = {"name", "description", "price"}
 MIN_RATING = 1 # stars
 MAX_RATING = 5 # stars
 
+TRENDING_TIME = 30 # days
+TRENDING_MIN_REVIEWS = 0.1 # 10% of the average reviews
+TRENDING_SERVICES = "trending_services"
+TRENDING_LAST_UPDATE = "last_update"
+
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
+
+__GLOBAL__trending = {TRENDING_SERVICES: None, TRENDING_LAST_UPDATE: None}
 
 # TODO: (General) -> Create tests for each endpoint && add the required checks in each endpoint
 
@@ -314,3 +323,40 @@ def get_service_additionals(service_id: str):
         raise HTTPException(status_code=404, detail="No results found")
     additionals = [additionals_manager.get(additional_id) for additional_id in results]
     return {"status": "ok", "results": additionals}
+
+@app.get("/trending")
+def get_trending_services(
+    max_services: int,
+    offset: int = 0,
+    client_location: str = Query(...),
+    ):
+    if not client_location:
+        raise HTTPException(status_code=400, detail="Client location is required")
+    client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
+    all_available_services = [service["uuid"] for service in services_manager.search(client_location, hidden=False)]
+    if not all_available_services:
+        raise HTTPException(status_code=404, detail="No services found")
+    
+    recent_ratings = ratings_manager.get_recent(TRENDING_TIME, all_available_services)
+    ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in recent_ratings]  
+    last_update = __GLOBAL__trending[TRENDING_LAST_UPDATE] # date (YYYY-MM-DD)
+    today = time.strftime("%Y-%m-%d", time.gmtime())
+
+    if not last_update or last_update != today:
+        _update_trending_data(ratings_list, today)
+    
+    trending_services = __GLOBAL__trending[TRENDING_SERVICES][offset:offset+max_services]
+    remaining_services = max(len(__GLOBAL__trending[TRENDING_SERVICES]) - (offset + max_services), 0)
+    return {"status": "ok", "results": trending_services, "remaining_services": remaining_services}
+
+def _update_trending_data(reviews_list, today):
+    trending_services = TrendingAnaliser(reviews_list).get_services_rank()
+    avg_reviews = sum([service["REVIEWS_COUNT"] for service in trending_services.values()]) / len(trending_services)
+    min_reviews = avg_reviews * TRENDING_MIN_REVIEWS
+
+    filtered_services = {service: data for service, data in trending_services.items() if data["REVIEWS_COUNT"] >= min_reviews}
+    trending_services = sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
+
+    __GLOBAL__trending[TRENDING_SERVICES] = trending_services
+    __GLOBAL__trending[TRENDING_LAST_UPDATE] = today
+    
