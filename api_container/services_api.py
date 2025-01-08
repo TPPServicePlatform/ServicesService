@@ -83,8 +83,6 @@ TRENDING_LAST_UPDATE = "last_update"
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
 
-__GLOBAL__trending = {TRENDING_SERVICES: None, TRENDING_LAST_UPDATE: None}
-
 # TODO: (General) -> Create tests for each endpoint && add the required checks in each endpoint
 
 @app.post("/create")
@@ -339,24 +337,17 @@ def get_trending_services(
     
     recent_ratings = ratings_manager.get_recent(TRENDING_TIME, all_available_services)
     ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in recent_ratings]  
-    last_update = __GLOBAL__trending[TRENDING_LAST_UPDATE] # date (YYYY-MM-DD)
-    today = time.strftime("%Y-%m-%d", time.gmtime())
 
-    if not last_update or last_update != today:
-        _update_trending_data(ratings_list, today)
-    
-    trending_services = __GLOBAL__trending[TRENDING_SERVICES][offset:offset+max_services]
-    remaining_services = max(len(__GLOBAL__trending[TRENDING_SERVICES]) - (offset + max_services), 0)
+    trending_data = get_trending_data(ratings_list)
+    trending_services = trending_data[offset:offset+max_services]
+    remaining_services = max(len(trending_data) - (offset + max_services), 0)
     return {"status": "ok", "results": trending_services, "remaining_services": remaining_services}
 
-def _update_trending_data(reviews_list, today):
+def get_trending_data(reviews_list):
     trending_services = TrendingAnaliser(reviews_list).get_services_rank()
     avg_reviews = sum([service["REVIEWS_COUNT"] for service in trending_services.values()]) / len(trending_services)
     min_reviews = avg_reviews * TRENDING_MIN_REVIEWS
 
     filtered_services = {service: data for service, data in trending_services.items() if data["REVIEWS_COUNT"] >= min_reviews}
-    trending_services = sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
-
-    __GLOBAL__trending[TRENDING_SERVICES] = trending_services
-    __GLOBAL__trending[TRENDING_LAST_UPDATE] = today
+    return sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
     
