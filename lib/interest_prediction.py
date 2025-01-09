@@ -11,6 +11,7 @@ class InterestPredictor:
         self.bipartite_graph = self._create_bipartite_graph(reviews)
         self.services = {r[SERVICE_INDEX]: reviews.count(r) for r in reviews}
         self.user_id = user_id
+        # self.existing_services = {service for (user, service) in reviews if user == user_id}
         self._ebunch = self._get_ebunch(self.bipartite_graph, self.user_id)
 
     def _create_bipartite_graph(self, reviews: List[Tuple[str, str]]) -> nx.Graph:
@@ -29,5 +30,32 @@ class InterestPredictor:
         return [(user_id, service) for service in self.services if not graph.has_edge(user_id, service)]
     
     def get_interest_prediction(self) -> List[str]:
-        predictions = nx.preferential_attachment(self.bipartite_graph, ebunch=self._ebunch)
+        predictions = nx.common_neighbor_centrality(self.bipartite_graph, ebunch=self._ebunch)
         return {service: score for (user, service, score) in predictions}
+
+    
+# def _get_mock_data() -> List[Tuple[str, str]]:
+#     return [
+#         ('user1', 'service1'),
+#         ('user1', 'service2'),
+#         ('user1', 'service3'),
+#         ('user2', 'service1'),
+#         ('user2', 'service2'),
+#         ('user3', 'service4'),
+#         ('user3', 'service5'),
+#         ('user4', 'service1'),
+#         ('user4', 'service3'),
+#         ('user5', 'service1'),
+#         ('user5', 'service2'),
+#         ('user5', 'service6'),
+#     ]
+
+# def main():
+#     reviews = _get_mock_data()
+#     user_id = 'user2'
+#     predictor = InterestPredictor(reviews, user_id)
+#     predictions = predictor.get_interest_prediction()
+#     print(predictions)
+
+# if __name__ == '__main__':
+#     main()
