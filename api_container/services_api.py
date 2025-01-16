@@ -17,6 +17,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
 from lib.utils import time_to_string, validate_location, verify_fields
 from lib.trending import TrendingAnaliser
+from lib.interest_prediction import InterestPredictor
 
 time_start = time.time()
 
@@ -79,6 +80,8 @@ TRENDING_TIME = 30 # days
 TRENDING_MIN_REVIEWS = 0.1 # 10% of the average reviews
 TRENDING_SERVICES = "trending_services"
 TRENDING_LAST_UPDATE = "last_update"
+
+PERSONALIZED_TIME = 30 * 3 # days (3 months)
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -328,6 +331,33 @@ def get_trending_services(
     offset: int = 0,
     client_location: str = Query(...),
     ):
+    recent_ratings = _fetch_recent_ratings(client_location, TRENDING_TIME)
+    ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in recent_ratings]  
+
+    trending_data = _get_trending_data(ratings_list)
+    trending_services = trending_data[offset:offset+max_services]
+    remaining_services = max(len(trending_data) - (offset + max_services), 0)
+    return {"status": "ok", "results": trending_services, "remaining_services": remaining_services}
+
+@app.get("/recommendations/{user_id}")
+def get_personalized_recommendations(
+    user_id: str,
+    max_services: int,
+    offset: int = 0,
+    client_location: str = Query(...),
+    ):
+    recent_ratings = _fetch_recent_ratings(client_location, PERSONALIZED_TIME)
+    ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}") for r in recent_ratings]
+
+    predictor = InterestPredictor(ratings_list, user_id)
+    predictions = predictor.get_interest_prediction()
+    predictions = sorted(predictions.items(), key=operator.itemgetter(1), reverse=True)
+    recommendations = predictions[offset:offset+max_services]
+    remaining_services = max(len(predictions) - (offset + max_services), 0)
+    return {"status": "ok", "results": recommendations, "remaining_services": remaining_services}
+    
+
+def _fetch_recent_ratings(client_location, max_time):
     if not client_location:
         raise HTTPException(status_code=400, detail="Client location is required")
     client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
@@ -335,15 +365,10 @@ def get_trending_services(
     if not all_available_services:
         raise HTTPException(status_code=404, detail="No services found")
     
-    recent_ratings = ratings_manager.get_recent(TRENDING_TIME, all_available_services)
-    ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in recent_ratings]  
+    recent_ratings = ratings_manager.get_recent(max_time, all_available_services)
+    return recent_ratings
 
-    trending_data = get_trending_data(ratings_list)
-    trending_services = trending_data[offset:offset+max_services]
-    remaining_services = max(len(trending_data) - (offset + max_services), 0)
-    return {"status": "ok", "results": trending_services, "remaining_services": remaining_services}
-
-def get_trending_data(reviews_list):
+def _get_trending_data(reviews_list):
     trending_services = TrendingAnaliser(reviews_list).get_services_rank()
     avg_reviews = sum([service["REVIEWS_COUNT"] for service in trending_services.values()]) / len(trending_services)
     min_reviews = avg_reviews * TRENDING_MIN_REVIEWS

@@ -16,17 +16,10 @@ class InterestPredictor:
 
     def _create_bipartite_graph(self, reviews: List[Tuple[str, str]]) -> nx.Graph:
         bipartite_graph = nx.Graph()
-        # for r in reviews:
-        #     bipartite_graph.add_edge(r[CLIENT_INDEX], r[SERVICE_INDEX])
         bipartite_graph.add_edges_from((r[CLIENT_INDEX], r[SERVICE_INDEX]) for r in reviews)
         return bipartite_graph
     
     def _get_ebunch(self, graph: nx.Graph, user_id: str) -> List[Tuple[str, str]]:
-        # ebunch = []
-        # for service in self.services:
-        #     if not graph.has_edge(user_id, service):
-        #         ebunch.append((user_id, service))
-        # return ebunch
         return [(user_id, service) for service in self.services if not graph.has_edge(user_id, service)]
     
     def get_interest_prediction(self) -> List[str]:
