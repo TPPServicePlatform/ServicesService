@@ -28,4 +28,7 @@ class ServicesLib:
         results = self.ratings.get_recent(max_delta_days)
         if not results:
             return None
-        return [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in results]      
+        return [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in results]
+
+    def get_available_services(self, location: str) -> Optional[list[str]]:
+        return self.services.get_available_services(location)   

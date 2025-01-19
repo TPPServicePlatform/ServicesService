@@ -65,3 +65,36 @@ class Services:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
         return results[0] or None
+    
+    def get_available_services(self, client_location: dict) -> Optional[List[dict]]:
+        pipeline = []
+
+        if not os.environ.get('MONGOMOCK'):
+            geo_near_stage = {
+                '$geoNear': {
+                    'near': {
+                        'type': 'Point',
+                        'coordinates': [client_location['longitude'], client_location['latitude']]
+                    },
+                    'distanceField': 'distance',
+                    'spherical': True
+                }
+            }
+            pipeline.append(geo_near_stage)
+
+            match_stage = {
+                '$match': {
+                    '$expr': {
+                        '$lte': [
+                            '$distance',
+                            {'$multiply': ['$max_distance', 1000]} # Convert kilometers to meters
+                        ]
+                    }
+                }
+            }
+            pipeline.append(match_stage)
+
+        pipeline.append({'$match': {'hidden': False}})
+
+        results = [dict(result) for result in self.collection.aggregate(pipeline)]
+        return [str(result["_id"]) for result in results] if results else None
