@@ -30,6 +30,8 @@ class Services:
     - hidden (bool): If the service is hidden or not
     - sum_rating (int): The sum of all ratings
     - num_ratings (int): The number of ratings
+    - reviews_summary (str): The summary of the reviews
+    - reviews_summary_updated_at (datetime): The date when the reviews summary was updated
     - location (longitude and latitude): The address of the service
     - max_distance (int): The maximum distance from the location (kilometers)
     - additional_ids (list): The ids of the additional services
@@ -74,6 +76,8 @@ class Services:
                 'hidden': False,
                 'sum_rating': 0,
                 'num_ratings': 0,
+                'reviews_summary': '',
+                'reviews_summary_updated_at': get_actual_time(),
                 'location': {'type': 'Point', 'coordinates': [location['longitude'], location['latitude']]},
                 'max_distance': max_distance,
                 'additional_ids': [],

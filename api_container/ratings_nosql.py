@@ -104,3 +104,14 @@ class Ratings:
             return None
         
         return [dict(rating) for rating in result]
+    
+    def get_recent_comments_by_service(self, max_delta_days: int, service_uuid: str) -> Optional[list[str]]:
+        query = {'updated_at': {'$gte': get_time_past_days(max_delta_days)},
+                 'service_uuid': service_uuid}
+        projection = {'comment': 1}
+        
+        result = self.collection.find(query, projection)
+        if not result:
+            return None
+        
+        return [rating['comment'] for rating in result]

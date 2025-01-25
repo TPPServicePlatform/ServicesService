@@ -18,6 +18,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from lib.utils import time_to_string, validate_location, verify_fields
 from lib.trending import TrendingAnaliser
 from lib.interest_prediction import InterestPredictor
+from lib.review_summarizer import ReviewSummarizer
 
 time_start = time.time()
 
@@ -55,11 +56,13 @@ if os.getenv('TESTING'):
     ratings_manager = Ratings(test_client=client)
     rentals_manager = Rentals(test_client=client)
     additionals_manager = Additionals(test_client=client)
+    review_summarizer = ReviewSummarizer()
 else:
     services_manager = Services()
     ratings_manager = Ratings()
     rentals_manager = Rentals()
     additionals_manager = Additionals()
+    review_summarizer = ReviewSummarizer()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price", "location", "max_distance"}
 REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
@@ -173,6 +176,8 @@ def review(id: str, body: dict):
     if not services_manager.update_rating(id, data["rating"], True):
         ratings_manager.delete(review_uuid)
         raise HTTPException(status_code=400, detail="Error updating service rating")
+    
+    review_summarizer.update_service(id)
 
     return {"status": "ok", "review_id": review_uuid}
 
@@ -186,6 +191,7 @@ def delete_review(id: str, user_uuid: str):
         raise HTTPException(status_code=400, detail="Error deleting review")
 
     services_manager.update_rating(id, review["rating"], False)
+    review_summarizer.update_service(id)
     return {"status": "ok"}
 
 @app.get("/{id}/reviews")
