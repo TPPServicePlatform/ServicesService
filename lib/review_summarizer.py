@@ -15,6 +15,7 @@ MAX_REVIEWS_TIME = 365 # days
 
 WAIT_WORKER_TIME = 60 # seconds
 
+#TODO: Test this class
 class ReviewSummarizer:
     def __init__(self):
         self.services_manager = Services()
