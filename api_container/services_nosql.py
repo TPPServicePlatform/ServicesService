@@ -222,3 +222,69 @@ class Services:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
         return results[0] or None
+    
+    def get_similar_services(self, client_location: dict, category: str) -> Optional[List[Dict]]:
+        pipeline = []
+
+        if not os.environ.get('MONGOMOCK'):
+            geo_near_stage = {
+                '$geoNear': {
+                    'near': {
+                        'type': 'Point',
+                        'coordinates': [client_location['longitude'], client_location['latitude']]
+                    },
+                    'distanceField': 'distance',
+                    'spherical': True
+                }
+            }
+            pipeline.append(geo_near_stage)
+
+            match_stage = {
+                '$match': {
+                    '$expr': {
+                        '$lte': [
+                            '$distance',
+                            {'$multiply': ['$max_distance', 1000]} # Convert kilometers to meters
+                        ]
+                    }
+                }
+            }
+            pipeline.append(match_stage)
+        
+        match_stage = {
+            '$match': {'category': category}
+        }
+        pipeline.append(match_stage)
+
+
+        results = [dict(result) for result in self.collection.aggregate(pipeline)]
+
+        for result in results:
+            if '_id' in result:
+                result['_id'] = str(result['_id'])
+        return results or None
+    
+    def get_provider_categories(self, provider_id: str) -> List[str]:
+        results = self.collection.aggregate([
+            {'$match': {'provider_id': provider_id}},
+            {'$group': {'_id': '$category'}}
+        ])
+        results = [result['_id'] for result in results]
+        return results or None
+    
+    def get_provider_category_avg_price(self, provider_id: str, category: str) -> float:
+        results = self.collection.aggregate([
+            {'$match': {'provider_id': provider_id, 'category': category}},
+            {'$group': {'_id': category, 'avg_price': {'$avg': '$price'}}}
+        ])
+        results = [result['avg_price'] for result in results]
+        return results[0] if results else None
+    
+    def get_provider_avg_score(self, provider_id: str) -> float:
+        results = self.collection.aggregate([
+            {'$match': {'provider_id': provider_id}},
+            {'$group': {'_id': provider_id, 'total_rating_count': {'$sum': '$num_ratings'}, 'total_rating_sum': {'$sum': '$sum_rating'}}}
+        ])
+        avg_score = sum(result['total_rating_sum'] / result['total_rating_count'] for result in results)
+        return avg_score / len(results) if results else None
+    
