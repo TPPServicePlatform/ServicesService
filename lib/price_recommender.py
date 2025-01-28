@@ -111,16 +111,22 @@ class PriceRecommender:
         return percentiles[nearest_percentile]
     
     def _get_price_range(self, min_price, price_range, provider_price, similar_services_avg_price):
+        avg = lambda x, y: (x + y) / 2
+
         recommendation = RECOMMENDATION_FORMAT.copy()
         recommendation['MIN_PRICE'] = max(min_price, price_range[0])
         recommendation['MAX_PRICE'] = price_range[1]
         recommendation['MAX_PRICE'] += max(0, min_price - price_range[0])
         
+        if similar_services_avg_price > recommendation['MAX_PRICE']:
+            recommendation['MAX_PRICE'] = similar_services_avg_price
+        else:
+            similar_services_avg_price = max(similar_services_avg_price, recommendation['MIN_PRICE'])
+        
         provider_price = min(provider_price, price_range[1])
         provider_price = max(provider_price, recommendation['MIN_PRICE'])
-        similar_services_avg_price = min(similar_services_avg_price, price_range[1])
-        similar_services_avg_price = max(similar_services_avg_price, recommendation['MIN_PRICE'])
-        recommendation['RECOMMENDED_PRICE'] = (provider_price + similar_services_avg_price) / 2
+
+        recommendation['RECOMMENDED_PRICE'] = avg(provider_price, similar_services_avg_price)
 
         return recommendation
     
