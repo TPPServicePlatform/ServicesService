@@ -111,7 +111,7 @@ class Services:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
             return False
 
-    def search(self, client_location: dict, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, min_avg_rating: float = None) -> Optional[List[dict]]:
+    def search(self, client_location: dict, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, min_avg_rating: float = None, max_avg_rating: float = None) -> Optional[List[dict]]:
         pipeline = []
 
         if not os.environ.get('MONGOMOCK'):
@@ -171,6 +171,8 @@ class Services:
             # query['$expr'] = {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}
             pipeline.append({'$match': {'$expr': {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}}})
 
+        if max_avg_rating:
+            pipeline.append({'$match': {'$expr': {'$lte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, max_avg_rating]}}})
 
         results = [dict(result) for result in self.collection.aggregate(pipeline)]
 
