@@ -19,6 +19,7 @@ from lib.utils import time_to_string, validate_location, verify_fields
 from lib.trending import TrendingAnaliser
 from lib.interest_prediction import InterestPredictor
 from lib.review_summarizer import ReviewSummarizer
+from lib.price_recommender import PriceRecommender
 
 time_start = time.time()
 
@@ -57,12 +58,14 @@ if os.getenv('TESTING'):
     rentals_manager = Rentals(test_client=client)
     additionals_manager = Additionals(test_client=client)
     review_summarizer = ReviewSummarizer()
+    price_recommender = PriceRecommender()
 else:
     services_manager = Services()
     ratings_manager = Ratings()
     rentals_manager = Rentals()
     additionals_manager = Additionals()
     review_summarizer = ReviewSummarizer()
+    price_recommender = PriceRecommender()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id", "category", "price", "location", "max_distance"}
 REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
@@ -85,6 +88,8 @@ TRENDING_SERVICES = "trending_services"
 TRENDING_LAST_UPDATE = "last_update"
 
 PERSONALIZED_TIME = 30 * 3 # days (3 months)
+
+AVAILABLE_OCCUPATIONS = {"LOW", "MEDIUM", "HIGH"}
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -361,6 +366,15 @@ def get_personalized_recommendations(
     recommendations = predictions[offset:offset+max_services]
     remaining_services = max(len(predictions) - (offset + max_services), 0)
     return {"status": "ok", "results": recommendations, "remaining_services": remaining_services}
+
+@app.get("/services/{service_id}/price_recommendation")
+def get_price_recommendation(service_id: str, cost: float, occupation: str):
+    if not services_manager.get(service_id):
+        raise HTTPException(status_code=404, detail="Service not found")
+    if not occupation in AVAILABLE_OCCUPATIONS:
+        raise HTTPException(status_code=400, detail="Invalid occupation, must be one of: " + ", ".join(AVAILABLE_OCCUPATIONS))
+    
+    return price_recommender.get_recommendation(service_id, cost, occupation)
     
 
 def _fetch_recent_ratings(client_location, max_time):
