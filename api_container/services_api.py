@@ -15,7 +15,7 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import time_to_string, validate_location, verify_fields
+from lib.utils import create_repetitions_list, time_to_string, validate_date, validate_location, verify_fields
 from lib.trending import TrendingAnaliser
 from lib.interest_prediction import InterestPredictor
 from lib.review_summarizer import ReviewSummarizer
@@ -74,13 +74,15 @@ VALID_UPDATE_FIELDS = {"service_name", "description", "category", "price", "hidd
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
 OPTIONAL_REVIEW_FIELDS = {"comment"}
 REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id", "start_date", "end_date", "location"}
-OPTIONAL_RENTAL_FIELDS = {"additionals"}
+OPTIONAL_RENTAL_FIELDS = {"additionals", "repeat", "max_repeats"}
 VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED"}
 DEFAULT_RENTAL_STATUS = "PENDING"
 REQUIRED_ADDITIONAL_FIELDS = {"name", "provider_id", "description", "price"}
 VALID_UPDATE_ADDITIONAL_FIELDS = {"name", "description", "price"}
 MIN_RATING = 1 # stars
 MAX_RATING = 5 # stars
+
+VALID_REPETITIONS = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
 
 TRENDING_TIME = 30 # days
 TRENDING_MIN_REVIEWS = 0.1 # 10% of the average reviews
@@ -216,13 +218,38 @@ def book(id: str, body: dict):
     
     if not data["end_date"] > data["start_date"]:
         raise HTTPException(status_code=400, detail="End date must be greater than start date")
+    starting_time = validate_date(data["start_date"])
+    ending_time = validate_date(data["end_date"])
 
     client_location = validate_location(data["location"], REQUIRED_LOCATION_FIELDS)
     additionals = data.get("additionals", [])
-    rental_uuid = rentals_manager.insert(id, data["provider_id"], data["client_id"], data["start_date"], data["end_date"], client_location, DEFAULT_RENTAL_STATUS, additionals)
-    if not rental_uuid:
-        raise HTTPException(status_code=400, detail="Error creating rental")
-    return {"status": "ok", "rental_id": rental_uuid}
+
+    if data.get("repeat").is_none() != data.get("max_repeats").is_none():
+        raise HTTPException(status_code=400, detail="Both repeat and max_repeats must be provided")
+
+    if "repeat" in data and data["repeat"] not in VALID_REPETITIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid repetition, must be one of: {', '.join(VALID_REPETITIONS)}")
+    if "max_repeats" in data and data["max_repeats"] < 2:
+        raise HTTPException(status_code=400, detail="Max repeats must be greater than 1")
+    
+    if "repeat" in data:
+        repetitions = create_repetitions_list(data["repeat"], data["max_repeats"], data["start_date"], data["end_date"])
+        info_key = "rental_ids"
+    else:
+        repetitions = [(starting_time, ending_time)]
+        info_key = "rental_id"
+
+    rental_uuids = []
+    for repetition in repetitions:
+        start, end = repetition
+        rental_uuid = rentals_manager.insert(id, data["provider_id"], data["client_id"], start, end, client_location, DEFAULT_RENTAL_STATUS, additionals)
+        if not rental_uuid:
+            for uuid in rental_uuids:
+                rentals_manager.delete(uuid)
+            raise HTTPException(status_code=400, detail="Error creating rentals")
+        rental_uuids.append(rental_uuid)
+        
+    return {"status": "ok", info_key: rental_uuids if len(rental_uuids) > 1 else rental_uuids[0]}
 
 @app.put("/{id}/book/{rental_id}")
 def update_booking(id: str, rental_id: str, body: dict):

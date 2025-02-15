@@ -70,7 +70,6 @@ class Services:
                 'service_name': service_name,
                 'provider_id': provider_id,
                 'description': description,
-                'created_at': get_actual_time(),
                 'category': category,
                 'price': price,
                 'hidden': False,

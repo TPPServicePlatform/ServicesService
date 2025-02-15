@@ -60,3 +60,33 @@ def verify_fields(required_fields: set, optional_fields: set, data: dict):
     
 def get_time_past_days(days: int) -> str:
     return datetime.datetime.fromtimestamp(time.time() - days * DAY).strftime('%Y-%m-%d %H:%M:%S')
+
+def validate_date(date: str) -> str:
+    try:
+        datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+        return date
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format (must be 'YYYY-MM-DD HH:MM:SS')")
+    
+def create_repetitions_list(interval: str, max_repetitions: int, starting_time: str, ending_time: str) -> list:
+    DELTAS = {
+        "DAILY": datetime.timedelta(days=1), 
+        "WEEKLY": datetime.timedelta(weeks=1), 
+        "MONTHLY": datetime.timedelta(days=30), 
+        "YEARLY": datetime.timedelta(days=365)
+        }
+    
+    repetitions = []
+    starting_time = datetime.datetime.strptime(starting_time, '%Y-%m-%d %H:%M:%S')
+    ending_time = datetime.datetime.strptime(ending_time, '%Y-%m-%d %H:%M:%S')
+
+    interval = DELTAS.get(interval)
+    if interval is None:
+        raise HTTPException(status_code=400, detail="Invalid interval (must be 'DAILY', 'WEEKLY', 'MONTHLY' or 'YEARLY')")
+    
+    while len(repetitions) < max_repetitions:
+        repetitions.append((starting_time.strftime('%Y-%m-%d %H:%M:%S'), ending_time.strftime('%Y-%m-%d %H:%M:%S')))
+        starting_time += DELTAS[interval]
+        ending_time += DELTAS[interval]
+
+    return repetitions
