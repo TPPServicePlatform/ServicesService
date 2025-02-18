@@ -26,8 +26,8 @@ class Rentals:
     - additionals (List[str]): The list of uuids of the additionals
     - provider_id (str): The uuid of the provider user
     - client_id (str): The uuid of the client user
-    - start_date (datetime): The start date of the rental
-    - end_date (datetime): The end date of the rental
+    - start_date (datetime): The start date and time of the rental
+    - end_date (datetime): The end date and time of the rental
     - location (longitude and latitude): The address of where the service will be provided
     - status (str): The status of the rental (PENDING, ACCEPTED, REJECTED, CANCELLED, FINISHED)
     - created_at (datetime): The date when the rental was created

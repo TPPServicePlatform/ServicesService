@@ -20,7 +20,7 @@ def time_to_string(time_in_seconds: float) -> str:
     return f"{minutes}m {seconds}s {millis}ms"
 
 def get_mongo_client() -> MongoClient:
-    uri = f"mongodb+srv://{os.getenv('MONGO_USER')}:{os.getenv('MONGO_PASSWORD')}@{os.getenv('MONGO_HOST')}/?retryWrites=true&w=majority&appName={os.getenv('MONGO_APP_NAME')}"
+    uri = f"mongodb://{os.getenv('MONGO_USER')}:{os.getenv('MONGO_PASSWORD')}@{os.getenv('MONGO_HOST')}/?retryWrites=true&w=majority&appName={os.getenv('MONGO_APP_NAME')}"
     print(f"Connecting to MongoDB: {uri}")
     logger.getLogger('pymongo').setLevel(logger.WARNING)
     return MongoClient(uri, server_api=ServerApi('1'))
@@ -60,3 +60,42 @@ def verify_fields(required_fields: set, optional_fields: set, data: dict):
     
 def get_time_past_days(days: int) -> str:
     return datetime.datetime.fromtimestamp(time.time() - days * DAY).strftime('%Y-%m-%d %H:%M:%S')
+
+def validate_date(date: str) -> str:
+    try:
+        datetime.datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+        return date
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format (must be 'YYYY-MM-DD HH:MM:SS')")
+    
+def create_repetitions_list(interval: str, max_repetitions: int, starting_time: str, ending_time: str) -> list:
+    def get_month_days(month: int) -> int:
+        if month == 2:
+            return 28
+        if month in {4, 6, 9, 11}:
+            return 30
+        return 31
+
+    DELTAS = {
+        "DAILY": datetime.timedelta(days=1), 
+        "WEEKLY": datetime.timedelta(weeks=1), 
+        "MONTHLY": datetime.timedelta(days= get_month_days(int(starting_time[5:7]))),
+        "YEARLY": datetime.timedelta(days=365)
+        }
+    
+    repetitions = []
+    starting_time = datetime.datetime.strptime(starting_time, '%Y-%m-%d %H:%M:%S')
+    ending_time = datetime.datetime.strptime(ending_time, '%Y-%m-%d %H:%M:%S')
+
+    interval = DELTAS.get(interval)
+    if interval is None:
+        raise HTTPException(status_code=400, detail="Invalid interval (must be 'DAILY', 'WEEKLY', 'MONTHLY' or 'YEARLY')")
+    
+    while len(repetitions) < max_repetitions:
+        repetitions.append((starting_time.strftime('%Y-%m-%d %H:%M:%S'), ending_time.strftime('%Y-%m-%d %H:%M:%S')))
+        starting_time += interval
+        ending_time += interval
+        # starting_time += DELTAS[interval]
+        # ending_time += DELTAS[interval]
+
+    return repetitions

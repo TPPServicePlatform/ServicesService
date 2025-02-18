@@ -17,9 +17,9 @@ WAIT_WORKER_TIME = 60 # seconds
 
 #TODO: Test this class
 class ReviewSummarizer:
-    def __init__(self):
-        self.services_manager = Services()
-        self.ratings_manager = Ratings()
+    def __init__(self, test_client=None):
+        self.services_manager = Services(test_client=test_client)
+        self.ratings_manager = Ratings(test_client=test_client)
         self.services_queues = {}
         self.actual_workers = []
 
