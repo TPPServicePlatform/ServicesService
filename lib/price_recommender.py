@@ -59,8 +59,8 @@ MINIMUM_SIMILARITY = 0.5
 #TODO: Test this class
 
 class PriceRecommender:
-    def __init__(self):
-        self.services_manager = Services()
+    def __init__(self, test_client=None):
+        self.services_manager = Services(test_client=test_client)
         self.sentences_comparator = SentenceComparator()
 
     def _get_similar_services_percentiles(self, location, category):

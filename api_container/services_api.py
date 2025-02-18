@@ -57,8 +57,8 @@ if os.getenv('TESTING'):
     ratings_manager = Ratings(test_client=client)
     rentals_manager = Rentals(test_client=client)
     additionals_manager = Additionals(test_client=client)
-    review_summarizer = ReviewSummarizer()
-    price_recommender = PriceRecommender()
+    review_summarizer = ReviewSummarizer(test_client=client)
+    price_recommender = PriceRecommender(test_client=client)
 else:
     services_manager = Services()
     ratings_manager = Ratings()
@@ -184,7 +184,8 @@ def review(id: str, body: dict):
         ratings_manager.delete(review_uuid)
         raise HTTPException(status_code=400, detail="Error updating service rating")
     
-    review_summarizer.update_service(id)
+    if not os.getenv('TESTING'):
+        review_summarizer.add_service(id)
 
     return {"status": "ok", "review_id": review_uuid}
 
@@ -198,7 +199,8 @@ def delete_review(id: str, user_uuid: str):
         raise HTTPException(status_code=400, detail="Error deleting review")
 
     services_manager.update_rating(id, review["rating"], False)
-    review_summarizer.update_service(id)
+    if not os.getenv('TESTING'):
+        review_summarizer.add_service(id)
     return {"status": "ok"}
 
 @app.get("/{id}/reviews")
@@ -224,7 +226,7 @@ def book(id: str, body: dict):
     client_location = validate_location(data["location"], REQUIRED_LOCATION_FIELDS)
     additionals = data.get("additionals", [])
 
-    if data.get("repeat").is_none() != data.get("max_repeats").is_none():
+    if ("repeat" in data) != ("max_repeats" in data):
         raise HTTPException(status_code=400, detail="Both repeat and max_repeats must be provided")
 
     if "repeat" in data and data["repeat"] not in VALID_REPETITIONS:

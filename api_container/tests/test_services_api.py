@@ -18,6 +18,7 @@ os.environ['MONGO_TEST_DB'] = 'test_db'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
 from services_api import app, services_manager, ratings_manager, rentals_manager, additionals_manager
+from lib.utils import get_actual_time
 
 @pytest.fixture(scope='function')
 def test_app():
