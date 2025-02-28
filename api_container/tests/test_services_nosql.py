@@ -31,7 +31,7 @@ def services(mongo_client):
     return Services(test_client=mongo_client)
 
 def test_insert_service(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
         service_name='Test Service',
         provider_id='test_user',
@@ -44,7 +44,7 @@ def test_insert_service(services, mocker):
     assert service_id is not None
 
 def test_get_service(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
         service_name='Test Service',
         provider_id='test_user',
@@ -62,7 +62,7 @@ def test_get_service(services, mocker):
     assert service['provider_id'] == 'test_user'
 
 def test_delete_service(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
         service_name='Test Service',
         provider_id='test_user',
@@ -78,7 +78,7 @@ def test_delete_service(services, mocker):
     assert services is None
 
 def test_update_service(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
         service_name='Test Service',
         provider_id='test_user',
@@ -102,7 +102,7 @@ def test_update_service(services, mocker):
     assert service['provider_id'] == 'test_user'
 
 def test_search_by_keywords(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
         service_name='Test Service 1',
         provider_id='test_user_1',
@@ -126,7 +126,7 @@ def test_search_by_keywords(services, mocker):
     assert results[0]['service_name'] == 'Test Service 1'
 
 def test_search_by_provider_id(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
         service_name='Test Service 1',
         provider_id='test_user_1',
@@ -150,7 +150,7 @@ def test_search_by_provider_id(services, mocker):
     assert results[0]['provider_id'] == 'test_user_1'
  
 def test_search_by_price_range(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
         service_name='Test Service 1',
         provider_id='test_user_1',
@@ -174,7 +174,7 @@ def test_search_by_price_range(services, mocker):
     assert results[0]['price'] == 200
 
 def test_search_by_hidden_status(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     uuid = services.insert(
         service_name='Test Service 1',
         provider_id='test_user_1',
@@ -200,7 +200,7 @@ def test_search_by_hidden_status(services, mocker):
     assert results[0]['service_name'] == 'Test Service 2'
 
 def test_get_additional_ids(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
         service_name='Test Service',
         provider_id='test_user',
@@ -214,7 +214,7 @@ def test_get_additional_ids(services, mocker):
     assert additional_ids == []
 
 def test_add_additional_id(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
         service_name='Test Service',
         provider_id='test_user',
@@ -230,7 +230,7 @@ def test_add_additional_id(services, mocker):
     assert 'additional_id_1' in additional_ids
 
 def test_remove_additional_id(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
         service_name='Test Service',
         provider_id='test_user',
@@ -247,7 +247,7 @@ def test_remove_additional_id(services, mocker):
     assert 'additional_id_1' not in additional_ids
 
 def test_ratings_by_provider(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
         service_name='Test Service 1',
         provider_id='test_user_1',
