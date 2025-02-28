@@ -30,7 +30,7 @@ def ratings(mongo_client):
     return Ratings(test_client=mongo_client)
 
 def test_insert_rating(ratings, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('ratings_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rating_id = ratings.insert(
         service_uuid='service-uuid',
         rating=5,
@@ -40,7 +40,7 @@ def test_insert_rating(ratings, mocker):
     assert rating_id is not None
 
 def test_get_rating(ratings, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('ratings_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     _ = ratings.insert(
         service_uuid='service-uuid',
         rating=5,
@@ -53,7 +53,7 @@ def test_get_rating(ratings, mocker):
     assert rating['user_uuid'] == 'user-uuid'
 
 def test_get_all_ratings(ratings, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('ratings_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     ratings.insert(
         service_uuid='service-uuid',
         rating=5,
@@ -71,7 +71,7 @@ def test_get_all_ratings(ratings, mocker):
     assert len(all_ratings) == 2
 
 def test_delete_rating(ratings, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('ratings_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rating_id = ratings.insert(
         service_uuid='service-uuid',
         rating=5,
@@ -84,7 +84,7 @@ def test_delete_rating(ratings, mocker):
     assert rating is None
 
 def test_update_rating(ratings, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('ratings_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rating_id = ratings.insert(
         service_uuid='service-uuid',
         rating=5,
