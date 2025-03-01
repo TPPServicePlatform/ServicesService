@@ -33,7 +33,7 @@ def services(mongo_client):
 
 
 def test_search_by_location(services, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
 
     # Insert documents with different locations
     services.insert(
