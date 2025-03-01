@@ -20,10 +20,12 @@ def time_to_string(time_in_seconds: float) -> str:
     return f"{minutes}m {seconds}s {millis}ms"
 
 def get_mongo_client() -> MongoClient:
+    if not all([os.getenv('MONGO_USER'), os.getenv('MONGO_PASSWORD'), os.getenv('MONGO_HOST'), os.getenv('MONGO_APP_NAME')]):
+        raise HTTPException(status_code=500, detail="MongoDB environment variables are not set properly")
     uri = f"mongodb://{os.getenv('MONGO_USER')}:{os.getenv('MONGO_PASSWORD')}@{os.getenv('MONGO_HOST')}/?retryWrites=true&w=majority&appName={os.getenv('MONGO_APP_NAME')}"
     print(f"Connecting to MongoDB: {uri}")
     logger.getLogger('pymongo').setLevel(logger.WARNING)
-    return MongoClient(uri, server_api=ServerApi('1'))
+    return MongoClient(uri)
 
 def get_actual_time() -> str:
     return datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S')
