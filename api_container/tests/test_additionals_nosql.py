@@ -31,7 +31,7 @@ def additionals(mongo_client):
     return Additionals(test_client=mongo_client)
 
 def test_insert_additional(additionals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('additionals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     additional_id = additionals.insert(
         name='Test Additional',
         provider_id='test_user',
@@ -41,7 +41,7 @@ def test_insert_additional(additionals, mocker):
     assert additional_id is not None
 
 def test_get_additional(additionals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('additionals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     additional_id = additionals.insert(
         name='Test Additional',
         provider_id='test_user',
@@ -53,7 +53,7 @@ def test_get_additional(additionals, mocker):
     assert additional['additional_name'] == 'Test Additional'
 
 def test_update_additional(additionals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('additionals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     additional_id = additionals.insert(
         name='Test Additional',
         provider_id='test_user',
@@ -70,7 +70,7 @@ def test_update_additional(additionals, mocker):
     assert additional['additional_name'] == 'Test Additional'
 
 def test_delete_additional(additionals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('additionals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     additional_id = additionals.insert(
         name='Test Additional',
         provider_id='test_user',
@@ -91,7 +91,7 @@ def test_delete_additional_not_found(additionals):
     assert result is False
 
 def test_get_additional_by_provider(additionals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('additionals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     additional_id = additionals.insert(
         name='Test Additional',
         provider_id='test_user',

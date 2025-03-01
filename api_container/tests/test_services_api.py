@@ -17,7 +17,8 @@ os.environ['MONGO_TEST_DB'] = 'test_db'
 # Add the necessary paths to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from services_api import app, services_manager, ratings_manager, rentals_manager, additionals_manager
+from services_api import app, services_manager, ratings_manager, rentals_manager, additionals_manager, create_repetitions_list
+from lib.utils import get_actual_time
 
 @pytest.fixture(scope='function')
 def test_app():
@@ -617,3 +618,28 @@ def test_get_service_additionals(test_app, mocker):
     results = response.json()['results']
     assert len(results) == 1
     assert results[0]['additional_name'] == 'Additional'
+
+def test_create_repetitions_list_daily(test_app, mocker):
+    interval = create_repetitions_list("DAILY", 3, '2023-01-01 00:05:35', '2023-01-02 00:05:50')
+    expected_interval = [
+        ('2023-01-01 00:05:35', '2023-01-02 00:05:50'),
+        ('2023-01-02 00:05:35', '2023-01-03 00:05:50'),
+        ('2023-01-03 00:05:35', '2023-01-04 00:05:50')
+    ]
+    assert interval == expected_interval
+
+def test_create_repetitions_list_weekly(test_app, mocker):
+    interval = create_repetitions_list("WEEKLY", 2, '2023-01-01 00:05:35', '2023-01-02 00:05:50')
+    expected_interval = [
+        ('2023-01-01 00:05:35', '2023-01-02 00:05:50'),
+        ('2023-01-08 00:05:35', '2023-01-09 00:05:50')
+    ]
+    assert interval == expected_interval
+
+def test_create_repetitions_list_monthly(test_app, mocker):
+    interval = create_repetitions_list("MONTHLY", 2, '2023-01-01 00:05:35', '2023-01-02 00:05:50')
+    expected_interval = [
+        ('2023-01-01 00:05:35', '2023-01-02 00:05:50'),
+        ('2023-02-01 00:05:35', '2023-02-02 00:05:50')
+    ]
+    assert interval == expected_interval

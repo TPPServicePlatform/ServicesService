@@ -31,7 +31,7 @@ def rentals(mongo_client):
     return Rentals(test_client=mongo_client)
 
 def test_insert_rental(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -44,7 +44,7 @@ def test_insert_rental(rentals, mocker):
     assert rental_id is not None
 
 def test_search_rental(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -62,7 +62,7 @@ def test_search_rental(rentals, mocker):
     assert rental['service_id'] == 'test_service'
 
 def test_update_rental(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -82,7 +82,7 @@ def test_update_rental(rentals, mocker):
     assert rental['uuid'] == rental_id
 
 def test_delete_rental(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -98,7 +98,7 @@ def test_delete_rental(rentals, mocker):
     assert rental is None
 
 def test_search_by_service_id(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -127,7 +127,7 @@ def test_search_by_service_id(rentals, mocker):
     assert rental['uuid'] == rental_id
 
 def test_search_by_provider_id(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -156,7 +156,7 @@ def test_search_by_provider_id(rentals, mocker):
     assert rental['uuid'] == rental_id
 
 def test_search_by_client_id(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -185,7 +185,7 @@ def test_search_by_client_id(rentals, mocker):
     assert rental['uuid'] == rental_id
 
 def test_search_by_status(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -214,7 +214,7 @@ def test_search_by_status(rentals, mocker):
     assert rental['uuid'] == rental_id
 
 def test_search_by_date_range(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -243,7 +243,7 @@ def test_search_by_date_range(rentals, mocker):
     assert rental['uuid'] == rental_id
 
 def test_search_by_multiple_criteria(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -281,7 +281,7 @@ def test_search_by_multiple_criteria(rentals, mocker):
     assert rental['provider_id'] == 'test_provider'
 
 def test_total_rentals(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     _ = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
@@ -304,7 +304,7 @@ def test_total_rentals(rentals, mocker):
     assert total == 2
 
 def test_finished_rentals(rentals, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     _ = rentals.insert(
         service_id='test_service',
         provider_id='test_provider',
