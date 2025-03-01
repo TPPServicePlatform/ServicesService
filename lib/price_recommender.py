@@ -31,8 +31,8 @@ nivel de fiabilidad:
         si el score es menor a 1 -> percentil hasta 30 (no hay minimo)
 """
 
-from api_container.services_nosql import Services
-from sentence_similarity import SentenceComparator
+from services_nosql import Services
+from lib.sentence_similarity import SentenceComparator
 import numpy as np
 
 PERCENTILE_RANGES = {
@@ -45,7 +45,7 @@ PERCENTILE_RANGES = {
 OCCUPATION_OBJECTIVES = {
     "LOW": 1.3,
     "MEDIUM": 1.5,
-    "HIGH": 1.9 
+    "HIGH": 1.9
 }
 
 RECOMMENDATION_FORMAT = {
@@ -56,7 +56,8 @@ RECOMMENDATION_FORMAT = {
 
 MINIMUM_SIMILARITY = 0.5
 
-#TODO: Test this class
+# TODO: Test this class
+
 
 class PriceRecommender:
     def __init__(self, test_client=None):
@@ -64,7 +65,8 @@ class PriceRecommender:
         self.sentences_comparator = SentenceComparator()
 
     def _get_similar_services_percentiles(self, location, category):
-        services = self.services_manager.get_similar_services(location, category)
+        services = self.services_manager.get_similar_services(
+            location, category)
         if not services:
             return None
         prices = [service['price'] for service in services]
@@ -73,23 +75,27 @@ class PriceRecommender:
                 50: np.percentile(prices, 50),
                 70: np.percentile(prices, 70),
                 90: np.percentile(prices, 90)}
-    
+
     def _get_provider_avg_percentile(self, provider_id, location):
-        provider_categories = self.services_manager.get_provider_categories(provider_id)
-        
+        provider_categories = self.services_manager.get_provider_categories(
+            provider_id)
+
         percentiles = []
         for category in provider_categories:
-            avg_price = self.services_manager.get_provider_category_avg_price(provider_id, category)
-            percentiles_category = self._get_similar_services_percentiles(location, category)
+            avg_price = self.services_manager.get_provider_category_avg_price(
+                provider_id, category)
+            percentiles_category = self._get_similar_services_percentiles(
+                location, category)
             if not percentiles_category:
                 continue
-            percentiles.append(next((perc for perc in percentiles_category if avg_price < percentiles_category[perc]), 90))
-        
+            percentiles.append(next(
+                (perc for perc in percentiles_category if avg_price < percentiles_category[perc]), 90))
+
         return np.mean(percentiles)
-    
+
     def _calculate_percentile_range(self, provider_score, service_score):
-        normalize = lambda x: min(4, max(1, int(round(x))))
-        avg = lambda x, y: (x + y) / 2
+        def normalize(x): return min(4, max(1, int(round(x))))
+        def avg(x, y): return (x + y) / 2
 
         provider_percentile = PERCENTILE_RANGES[normalize(provider_score)]
         if not service_score:
@@ -101,71 +107,74 @@ class PriceRecommender:
         service = self.services_manager.get(service_id)
         provider_id = service['provider_id']
 
-        provider_score = self.services_manager.get_provider_avg_score(provider_id)
-        service_score = service['sum_rating'] / service['rating_count'] if service['rating_count'] > 0 else None
+        provider_score = self.services_manager.get_provider_avg_score(
+            provider_id)
+        service_score = service['sum_rating'] / \
+            service['rating_count'] if service['rating_count'] > 0 else None
 
         return self._get_percentile_range(provider_score, service_score)
-    
+
     def _get_price_by_percentile(self, percentiles, percentile):
-        nearest_percentile = min(percentiles.keys(), key=lambda x: abs(x - percentile))
+        nearest_percentile = min(
+            percentiles.keys(), key=lambda x: abs(x - percentile))
         return percentiles[nearest_percentile]
-    
+
     def _get_price_range(self, min_price, price_range, provider_price, similar_services_avg_price):
-        avg = lambda x, y: (x + y) / 2
+        def avg(x, y): return (x + y) / 2
 
         recommendation = RECOMMENDATION_FORMAT.copy()
         recommendation['MIN_PRICE'] = max(min_price, price_range[0])
         recommendation['MAX_PRICE'] = price_range[1]
         recommendation['MAX_PRICE'] += max(0, min_price - price_range[0])
-        
+
         if similar_services_avg_price > recommendation['MAX_PRICE']:
             recommendation['MAX_PRICE'] = similar_services_avg_price
         else:
-            similar_services_avg_price = max(similar_services_avg_price, recommendation['MIN_PRICE'])
-        
+            similar_services_avg_price = max(
+                similar_services_avg_price, recommendation['MIN_PRICE'])
+
         provider_price = min(provider_price, price_range[1])
         provider_price = max(provider_price, recommendation['MIN_PRICE'])
 
-        recommendation['RECOMMENDED_PRICE'] = avg(provider_price, similar_services_avg_price)
+        recommendation['RECOMMENDED_PRICE'] = avg(
+            provider_price, similar_services_avg_price)
 
         return recommendation
-    
+
     def _get_avg_similar_services_price(self, service_id):
         service = self.services_manager.get(service_id)
         location = service['location']
-        score = service['sum_rating'] / service['rating_count'] if service['rating_count'] > 0 else None
+        score = service['sum_rating'] / \
+            service['rating_count'] if service['rating_count'] > 0 else None
         category = service['category']
 
-        similar_services = self.services_manager.search(location=location, category=category, min_avg_rating=score-0.5, max_avg_rating=score+0.5)
-        similar_services = {service['service_name']: service['price'] for service in similar_services}
+        similar_services = self.services_manager.search(
+            location=location, category=category, min_avg_rating=score-0.5, max_avg_rating=score+0.5)
+        similar_services = {
+            service['service_name']: service['price'] for service in similar_services}
 
-        similar_names = self.sentences_comparator.compare(service['service_name'], list(similar_services.keys()))
-        similar_names = [name for name, similarity in similar_names if similarity > MINIMUM_SIMILARITY]
+        similar_names = self.sentences_comparator.compare(
+            service['service_name'], list(similar_services.keys()))
+        similar_names = [
+            name for name, similarity in similar_names if similarity > MINIMUM_SIMILARITY]
         similar_prices = [similar_services[name] for name in similar_names]
-        
+
         return np.mean(similar_prices)
-    
+
     def get_recommendation(self, service_id, cost, occupation):
         min_price = cost * OCCUPATION_OBJECTIVES.get(occupation, 0.5)
-        
+
         percentile_range = self._get_percentile_range(service_id)
-        provider_percentile = self._get_provider_avg_percentile(service_id, percentile_range)
-        similar_percentiles = self._get_similar_services_percentiles(service_id)
-        
+        provider_percentile = self._get_provider_avg_percentile(
+            service_id, percentile_range)
+        similar_percentiles = self._get_similar_services_percentiles(
+            service_id)
+
         price_range = (self._get_price_by_percentile(similar_percentiles, percentile_range[0]),
                        self._get_price_by_percentile(similar_percentiles, percentile_range[1]))
-        provider_price = self._get_price_by_percentile(similar_percentiles, provider_percentile)
-        similar_services_avg_price = self._get_avg_similar_services_price(service_id)
+        provider_price = self._get_price_by_percentile(
+            similar_percentiles, provider_percentile)
+        similar_services_avg_price = self._get_avg_similar_services_price(
+            service_id)
 
         return self._get_price_range(min_price, price_range, provider_price, similar_services_avg_price)
-
-        
-
-
-
-                    
-
-
-            
-    
-
