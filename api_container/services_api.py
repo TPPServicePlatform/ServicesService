@@ -15,6 +15,7 @@ import logging as logger
 import time
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from imported_lib.SupportService.support_lib import SupportLib
 from dotenv import load_dotenv
 import sys
 import os
@@ -68,6 +69,7 @@ if os.getenv('TESTING'):
     additionals_manager = Additionals(test_client=client)
     review_summarizer = ReviewSummarizer(test_client=client)
     price_recommender = PriceRecommender(test_client=client)
+    support_lib = SupportLib(test_client=client)
 else:
     services_manager = Services()
     ratings_manager = Ratings()
@@ -75,6 +77,7 @@ else:
     additionals_manager = Additionals()
     review_summarizer = ReviewSummarizer()
     price_recommender = PriceRecommender()
+    support_lib = SupportLib()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id",
                           "category", "price", "location", "max_distance"}
@@ -176,7 +179,8 @@ def search(
     client_location = validate_location(
         client_location, REQUIRED_LOCATION_FIELDS)
 
-    results = services_manager.search(
+    suspended_providers = support_lib.get_all_users_suspended()
+    results = services_manager.search(suspended_providers,
         client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
