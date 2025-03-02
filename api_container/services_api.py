@@ -143,6 +143,11 @@ def delete(id: str):
         raise HTTPException(status_code=404, detail="Service not found")
     return {"status": "ok"}
 
+@app.delete("/delete_all/{provider_id}")
+def delete_all(provider_id: str):
+    if not services_manager.delete_all(provider_id):
+        raise HTTPException(status_code=404, detail="Services not found")
+    return {"status": "ok"}
 
 @app.put("/{id}")
 def update(id: str, body: dict):

@@ -101,6 +101,10 @@ class Services:
         result = self.collection.delete_one({'uuid': uuid})
         return result.deleted_count > 0
     
+    def delete_provider_services(self, provider_id: str) -> bool:
+        result = self.collection.delete_many({'provider_id': provider_id})
+        return result.deleted_count > 0
+    
     def update(self, uuid: str, data: dict) -> bool:
         data['updated_at'] = get_actual_time()
         try:
