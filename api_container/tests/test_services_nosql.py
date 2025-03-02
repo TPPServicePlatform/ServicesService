@@ -54,7 +54,7 @@ def test_get_service(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    services = services.search(client_location={'latitude': 0, 'longitude': 0}, uuid=service_id)
+    services = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, uuid=service_id)
     assert services is not None
     service = services[0]
     assert service is not None
@@ -74,7 +74,7 @@ def test_delete_service(services, mocker):
     )
     result = services.delete(service_id)
     assert result is True
-    services = services.search(client_location={'latitude': 0, 'longitude': 0}, uuid=service_id)
+    services = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, uuid=service_id)
     assert services is None
 
 def test_update_service(services, mocker):
@@ -94,7 +94,7 @@ def test_update_service(services, mocker):
     }
     result = services.update(service_id, update_data)
     assert result is True
-    services = services.search(client_location={'latitude': 0, 'longitude': 0}, uuid=service_id)
+    services = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, uuid=service_id)
     assert services is not None
     service = services[0]
     assert service['service_name'] == 'Updated Service'
@@ -121,7 +121,7 @@ def test_search_by_keywords(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    results = services.search(client_location={'latitude': 0, 'longitude': 0}, keywords=['Test Service 1'], provider_id=None, min_price=None, max_price=None, hidden=False)
+    results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, keywords=['Test Service 1'], provider_id=None, min_price=None, max_price=None, hidden=False)
     assert len(results) == 1
     assert results[0]['service_name'] == 'Test Service 1'
 
@@ -145,7 +145,7 @@ def test_search_by_provider_id(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    results = services.search(client_location={'latitude': 0, 'longitude': 0}, provider_id='test_user_1')
+    results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, provider_id='test_user_1')
     assert len(results) == 1
     assert results[0]['provider_id'] == 'test_user_1'
  
@@ -169,7 +169,7 @@ def test_search_by_price_range(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    results = services.search(client_location={'latitude': 0, 'longitude': 0}, min_price=150, max_price=250)
+    results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, min_price=150, max_price=250)
     assert len(results) == 1
     assert results[0]['price'] == 200
 
@@ -195,7 +195,7 @@ def test_search_by_hidden_status(services, mocker):
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
     )
-    results = services.search(client_location={'latitude': 0, 'longitude': 0}, hidden=False)
+    results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, hidden=False)
     assert len(results) == 1
     assert results[0]['service_name'] == 'Test Service 2'
 

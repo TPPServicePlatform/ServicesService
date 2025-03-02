@@ -65,7 +65,7 @@ def test_search_by_location(services, mocker):
     )
 
     # Perform a search based on a location
-    results = services.search(client_location={'latitude': -34.676567, 'longitude': -58.368461}) # @Avellaneda
+    results = services.search(set(), client_location={'latitude': -34.676567, 'longitude': -58.368461}) # @Avellaneda
    
     # Verify the search results
     assert len(results) == 2

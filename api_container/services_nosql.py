@@ -173,7 +173,7 @@ class Services:
         if max_avg_rating:
             pipeline.append({'$match': {'$expr': {'$lte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, max_avg_rating]}}})
 
-        pipeline.append({'$match': {'provider_id': {'$nin': suspended_providers}}})
+        pipeline.append({'$match': {'provider_id': {'$nin': list(suspended_providers)}}})
 
         results = [dict(result) for result in self.collection.aggregate(pipeline)]
 
