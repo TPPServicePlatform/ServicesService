@@ -7,6 +7,7 @@ from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 import logging as logger
 import re
+import sentry_sdk
 
 DAY = 24 * 60 * 60
 HOUR = 60 * 60
@@ -101,3 +102,21 @@ def create_repetitions_list(interval: str, max_repetitions: int, starting_time: 
         # ending_time += DELTAS[interval]
 
     return repetitions
+
+def sentry_init():
+    sentry_sdk.init(
+        dsn=os.getenv('SENTRY_DSN'),
+        # Add data like request headers and IP for users,
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        send_default_pii=True,
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for tracing.
+        traces_sample_rate=1.0,
+        _experiments={
+            # Set continuous_profiling_auto_start to True
+            # to automatically start the profiler on when
+            # possible.
+            "continuous_profiling_auto_start": True,
+        },
+    )
+    

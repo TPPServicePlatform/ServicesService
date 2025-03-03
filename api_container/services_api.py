@@ -2,7 +2,7 @@ from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
 from lib.interest_prediction import InterestPredictor
 from lib.trending import TrendingAnaliser
-from lib.utils import time_to_string, validate_location, verify_fields
+from lib.utils import sentry_init, time_to_string, validate_location, verify_fields
 import operator
 import re
 from typing import Optional, Tuple
@@ -40,6 +40,8 @@ DEBUG_MODE = os.getenv("DEBUG_MODE", "False").title() == "True"
 if DEBUG_MODE:
     logger.getLogger().setLevel(logger.DEBUG)
 logger.info("DEBUG_MODE: " + str(DEBUG_MODE))
+
+sentry_init()
 
 app = FastAPI(
     title="Services API",
