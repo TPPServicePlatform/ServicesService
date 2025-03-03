@@ -18,6 +18,7 @@ class Services:
     - service_name (str): The name of the service
     - provider_id (str): The id of the account that provides the service
     - description (str): The description of the service
+    - related_certifications (list): The certifications related to the service
     - created_at (datetime): The date when the service was created
     - category (str): The category of the service
     - price (float): The price of the service
@@ -98,3 +99,7 @@ class Services:
 
         results = [dict(result) for result in self.collection.aggregate(pipeline)]
         return [str(result["_id"]) for result in results] if results else None
+    
+    def delete_certification(self, provider_id: str, certification_id: str) -> bool:
+        result = self.collection.update_many({'provider_id': provider_id}, {'$pull': {'related_certifications': certification_id}})
+        return result.modified_count > 0
