@@ -136,6 +136,25 @@ def create(body: dict):
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
 
+@app.put("/certification/add/{service_id}/{certification_id}")
+def add_certification(service_id: str, certification_id: str):
+    if not services_manager.get(service_id):
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    if not services_manager.add_certification(service_id, certification_id):
+        raise HTTPException(
+            status_code=400, detail="Error adding certification to service")
+    return {"status": "ok"}
+
+@app.delete("/certification/delete/{service_id}/{certification_id}")
+def remove_certification(service_id: str, certification_id: str):
+    if not services_manager.get(service_id):
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    if not services_manager.remove_certification(service_id, certification_id):
+        raise HTTPException(
+            status_code=400, detail="Error removing certification from service")
+    return {"status": "ok"}
 
 @app.delete("/{id}")
 def delete(id: str):

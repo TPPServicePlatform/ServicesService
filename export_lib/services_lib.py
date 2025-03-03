@@ -31,4 +31,7 @@ class ServicesLib:
         return [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(r['rating'])) for r in results]
 
     def get_available_services(self, location: str) -> Optional[list[str]]:
-        return self.services.get_available_services(location)   
+        return self.services.get_available_services(location)
+
+    def delete_certification(self, provider_id: str, certification_id: str) -> bool:
+        return self.services.delete_certification(provider_id, certification_id)

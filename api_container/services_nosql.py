@@ -24,6 +24,7 @@ class Services:
     - service_name (str): The name of the service
     - provider_id (str): The id of the account that provides the service
     - description (str): The description of the service
+    - related_certifications (list): The certifications related to the service
     - created_at (datetime): The date when the service was created
     - category (str): The category of the service
     - price (float): The price of the service
@@ -70,6 +71,7 @@ class Services:
                 'service_name': service_name,
                 'provider_id': provider_id,
                 'description': description,
+                'related_certifications': [],
                 'category': category,
                 'price': price,
                 'hidden': False,
@@ -295,3 +297,24 @@ class Services:
         avg_score = sum(result['total_rating_sum'] / result['total_rating_count'] for result in results)
         return avg_score / len(results) if results else None
     
+    def add_certification(self, service_uuid: str, certification_id: str) -> bool:
+        service = self.get(service_uuid)
+        if not service:
+            return False
+        certifications = service.get('related_certifications', [])
+        if certification_id in certifications:
+            return True
+        return self.update(service_uuid, {'related_certifications': certifications + [certification_id], 'updated_at': get_actual_time()})
+    
+    def delete_certification(self, service_uuid: str, certification_id: str) -> bool:
+        service = self.get(service_uuid)
+        if not service:
+            return False
+        certifications = set(service.get('related_certifications', []))
+        if certification_id not in certifications:
+            return True
+        return self.update(service_uuid, {'related_certifications': list(certifications - {certification_id}), 'updated_at': get_actual_time()})
+    
+    def delete_certification(self, provider_id: str, certification_id: str) -> bool:
+        result = self.collection.update_many({'provider_id': provider_id}, {'$pull': {'related_certifications': certification_id}})
+        return result.modified_count > 0
