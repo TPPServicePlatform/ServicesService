@@ -1,4 +1,5 @@
 import datetime
+from mobile_token_nosql import MobileToken
 from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
 from lib.interest_prediction import InterestPredictor
@@ -53,8 +54,9 @@ app = FastAPI(
     root_path=os.getenv("ROOT_PATH")
 )
 
-daily_notification_sender_process = Process(target=daily_notification_sender)
-daily_notification_sender_process.start()
+if not os.getenv('TESTING'):
+    daily_notification_sender_process = Process(target=daily_notification_sender)
+    daily_notification_sender_process.start()
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET")
 
@@ -79,6 +81,7 @@ if os.getenv('TESTING'):
     price_recommender = PriceRecommender(test_client=client)
     support_lib = SupportLib(test_client=client)
     reminders_manager = Reminders(test_client=client)
+    mobile_token_manager = MobileToken(test_client=client)
 else:
     services_manager = Services()
     ratings_manager = Ratings()
@@ -88,6 +91,7 @@ else:
     price_recommender = PriceRecommender()
     support_lib = SupportLib()
     reminders_manager = Reminders()
+    mobile_token_manager = MobileToken()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id",
                           "category", "price", "location", "max_distance"}
@@ -262,7 +266,7 @@ def review(id: str, body: dict):
 
     service_name = service["service_name"]
     provider_id = service["provider_id"]
-    send_notification(provider_id, f"New review!", f"Go and check your service {service_name} to see the new review!") 
+    send_notification(mobile_token_manager, provider_id, f"New review!", f"Go and check your service {service_name} to see the new review!") 
 
     return {"status": "ok", "review_id": review_uuid}
 
@@ -343,7 +347,7 @@ def book(id: str, body: dict):
 
     provider_id = services_manager.get(id)["provider_id"]
     service_name = services_manager.get(id)["service_name"]
-    send_notification(provider_id, f"New booking!", f"Go and check your calendar to see the new booking for your service {service_name}!")
+    send_notification(mobile_token_manager, provider_id, f"New booking!", f"Go and check your calendar to see the new booking for your service {service_name}!")
         
     return {"status": "ok", info_key: rental_uuids if len(rental_uuids) > 1 else rental_uuids[0]}
 
@@ -372,8 +376,8 @@ def update_booking(id: str, rental_id: str, body: dict):
     service_name = services_manager.get(id)["service_name"]
     provider_id = services_manager.get(id)["provider_id"]
     client_id = rentals_manager.get(rental_id)["client_id"]
-    send_notification(client_id, f"Booking status update!", f"The status of your booking for the service {service_name} has been updated to {new_status}!")
-    send_notification(provider_id, f"Booking status update!", f"The status of the booking for your service {service_name} has been updated to {new_status}!")
+    send_notification(mobile_token_manager, client_id, f"Booking status update!", f"The status of your booking for the service {service_name} has been updated to {new_status}!")
+    send_notification(mobile_token_manager, provider_id, f"Booking status update!", f"The status of the booking for your service {service_name} has been updated to {new_status}!")
 
     if new_status in {"rejected", "cancelled"}:
         rentals_manager.delete_rental_reminders(rental_id)
