@@ -1,3 +1,4 @@
+from lib.utils import create_repetitions_list, time_to_string, validate_date, validate_location, verify_fields
 from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
 from lib.interest_prediction import InterestPredictor
@@ -21,12 +22,8 @@ import os
 import stripe
 
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import create_repetitions_list, time_to_string, validate_date, validate_location, verify_fields
-from lib.trending import TrendingAnaliser
-from lib.interest_prediction import InterestPredictor
-from lib.review_summarizer import ReviewSummarizer
-from lib.price_recommender import PriceRecommender
+sys.path.append(os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '..', '..', 'lib')))
 
 time_start = time.time()
 
@@ -47,7 +44,9 @@ app = FastAPI(
     root_path=os.getenv("ROOT_PATH")
 )
 
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET")
+if not os.getenv("STRIPE_SECRET"):
+    raise Exception("Stripe secret key not found")
+stripe.api_key = os.getenv("STRIPE_SECRET")
 
 origins = [
 ]
@@ -85,9 +84,11 @@ VALID_UPDATE_FIELDS = {"service_name",
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
 OPTIONAL_REVIEW_FIELDS = {"comment"}
 
-REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id", "start_date", "end_date", "location"}
+REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id",
+                          "start_date", "end_date", "location"}
 OPTIONAL_RENTAL_FIELDS = {"additionals", "repeat", "max_repeats"}
-VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED", "REJECTED", "CANCELLED", "FINISHED"}
+VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED",
+                       "REJECTED", "CANCELLED", "FINISHED"}
 
 DEFAULT_RENTAL_STATUS = "PENDING"
 REQUIRED_ADDITIONAL_FIELDS = {"name", "provider_id", "description", "price"}
@@ -98,8 +99,8 @@ MAX_RATING = 5  # stars
 
 VALID_REPETITIONS = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
 
-TRENDING_TIME = 30 # days
-TRENDING_MIN_REVIEWS = 0.1 # 10% of the average reviews
+TRENDING_TIME = 30  # days
+TRENDING_MIN_REVIEWS = 0.1  # 10% of the average reviews
 TRENDING_SERVICES = "trending_services"
 TRENDING_LAST_UPDATE = "last_update"
 
@@ -216,11 +217,11 @@ def review(id: str, body: dict):
     if not services_manager.update_rating(id, data["rating"], True):
         ratings_manager.delete(review_uuid)
 
-        raise HTTPException(status_code=400, detail="Error updating service rating")
-    
+        raise HTTPException(
+            status_code=400, detail="Error updating service rating")
+
     if not os.getenv('TESTING'):
         review_summarizer.add_service(id)
-
 
     return {"status": "ok", "review_id": review_uuid}
 
@@ -259,26 +260,29 @@ def book(id: str, body: dict):
 
     if not data["end_date"] > data["start_date"]:
 
-        raise HTTPException(status_code=400, detail="End date must be greater than start date")
+        raise HTTPException(
+            status_code=400, detail="End date must be greater than start date")
     starting_time = validate_date(data["start_date"])
     ending_time = validate_date(data["end_date"])
-
 
     client_location = validate_location(
         data["location"], REQUIRED_LOCATION_FIELDS)
     additionals = data.get("additionals", [])
 
-
     if ("repeat" in data) != ("max_repeats" in data):
-        raise HTTPException(status_code=400, detail="Both repeat and max_repeats must be provided")
+        raise HTTPException(
+            status_code=400, detail="Both repeat and max_repeats must be provided")
 
     if "repeat" in data and data["repeat"] not in VALID_REPETITIONS:
-        raise HTTPException(status_code=400, detail=f"Invalid repetition, must be one of: {', '.join(VALID_REPETITIONS)}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid repetition, must be one of: {', '.join(VALID_REPETITIONS)}")
     if "max_repeats" in data and data["max_repeats"] < 2:
-        raise HTTPException(status_code=400, detail="Max repeats must be greater than 1")
-    
+        raise HTTPException(
+            status_code=400, detail="Max repeats must be greater than 1")
+
     if "repeat" in data:
-        repetitions = create_repetitions_list(data["repeat"], data["max_repeats"], data["start_date"], data["end_date"])
+        repetitions = create_repetitions_list(
+            data["repeat"], data["max_repeats"], data["start_date"], data["end_date"])
         info_key = "rental_ids"
     else:
         repetitions = [(starting_time, ending_time)]
@@ -287,13 +291,15 @@ def book(id: str, body: dict):
     rental_uuids = []
     for repetition in repetitions:
         start, end = repetition
-        rental_uuid = rentals_manager.insert(id, data["provider_id"], data["client_id"], start, end, client_location, DEFAULT_RENTAL_STATUS, additionals)
+        rental_uuid = rentals_manager.insert(
+            id, data["provider_id"], data["client_id"], start, end, client_location, DEFAULT_RENTAL_STATUS, additionals)
         if not rental_uuid:
             for uuid in rental_uuids:
                 rentals_manager.delete(uuid)
-            raise HTTPException(status_code=400, detail="Error creating rentals")
+            raise HTTPException(
+                status_code=400, detail="Error creating rentals")
         rental_uuids.append(rental_uuid)
-        
+
     return {"status": "ok", info_key: rental_uuids if len(rental_uuids) > 1 else rental_uuids[0]}
 
 
@@ -320,28 +326,32 @@ def update_booking(id: str, rental_id: str, body: dict):
     return {"status": "ok"}
 
 
-@app.get("{id}/paymentlink/{rental_id}")
-async def create_payment_link(id: str, rental_id: str, body: dict):
-    data = {key: value for key, value in body.items(
-    ) if key in REQUIRED_PAYMENT_FIELDS}
-
+@app.get("/{id}/paymentlink")
+async def create_payment_link(
+    id: str,
+    amount: int = Query(..., description="Amount in cents"),
+    currency: str = Query(..., description="Currency code (e.g., 'usd')"),
+    description: str = Query(..., description="Description of the product")
+):
     try:
         checkout_session = stripe.checkout.Session.create(
             payment_method_types=["card"],
             line_items=[
                 {
                     "price_data": {
-                        "currency": "usd",
+                        "currency": currency,
                         "product_data": {
-                            "name": "T-Shirt",
-                            "description": "Comfortable cotton T-shirt",
+                            "name": "Test Product",
+                            "description": description,
                         },
-                        "unit_amount": 1000,
+                        "unit_amount": amount,
                     },
                     "quantity": 1,
                 },
             ],
             mode="payment",
+            success_url="https://example.com/success",  # Dummy URL, required by Stripe
+            cancel_url="https://example.com/cancel",  # Dummy URL
         )
         return {"url": checkout_session.url}
     except Exception as e:
