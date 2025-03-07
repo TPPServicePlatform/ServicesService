@@ -1,5 +1,6 @@
 python-dotenv
 fastapi
+sentry-sdk[fastapi]
 uvicorn
 requests
 pymongo[srv]
