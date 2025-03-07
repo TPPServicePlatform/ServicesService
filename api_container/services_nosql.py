@@ -99,6 +99,16 @@ class Services:
             result['_id'] = str(result['_id'])
         return dict(result) if result else None
     
+    def get_by_provider(self, provider_id: str) -> Optional[List[dict]]:
+        results = self.collection.find({'provider_id': provider_id}, {'uuid': 1, 'service_name': 1})
+        if not results:
+            return None
+        results = [dict(result) for result in results]
+        for result in results:
+            if '_id' in result:
+                result['_id'] = str(result['_id'])
+        return results
+    
     def delete(self, uuid: str) -> bool:
         result = self.collection.delete_one({'uuid': uuid})
         return result.deleted_count > 0

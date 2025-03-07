@@ -182,6 +182,13 @@ def update(id: str, body: dict):
         raise HTTPException(status_code=400, detail="Error updating service")
     return {"status": "ok"}
 
+@app.get("/provider/{provider_id}")
+def get_by_provider(provider_id: str):
+    results = services_manager.get_by_provider(provider_id)
+    if not results:
+        raise HTTPException(status_code=404, detail="No results found")
+    return {"status": "ok", "results": results}
+
 
 @app.get("/search")
 def search(
