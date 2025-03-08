@@ -217,7 +217,8 @@ def search(
     max_price: Optional[float] = Query(None),
     hidden: Optional[bool] = Query(None),
     uuid: Optional[str] = Query(None),
-    min_avg_rating: Optional[float] = Query(0.0)
+    min_avg_rating: Optional[float] = Query(0.0),
+    category: Optional[str] = Query(None)
 ):
     if keywords:
         keywords = keywords.split(",")
@@ -230,7 +231,7 @@ def search(
 
     suspended_providers = support_lib.get_all_users_suspended()
     results = services_manager.search(suspended_providers,
-        client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
+        client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating, category)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
