@@ -1,9 +1,11 @@
+import datetime
+from mobile_token_nosql import MobileToken
 from lib.utils import create_repetitions_list, time_to_string, validate_date, validate_location, verify_fields
 from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
 from lib.interest_prediction import InterestPredictor
 from lib.trending import TrendingAnaliser
-from lib.utils import sentry_init, time_to_string, validate_location, verify_fields
+from lib.utils import save_reminders, send_notification, sentry_init, time_to_string, validate_location, verify_fields
 import operator
 import re
 from typing import Optional, Tuple
@@ -11,6 +13,7 @@ from services_nosql import Services
 from rentals_nosql import Rentals
 from ratings_nosql import Ratings
 from additionals_nosql import Additionals
+from reminders_nosql import Reminders
 import mongomock
 import logging as logger
 import time
@@ -21,10 +24,16 @@ from dotenv import load_dotenv
 import sys
 import os
 import stripe
+from multiprocessing import Process
 
 
-sys.path.append(os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', '..', 'lib')))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
+from lib.utils import create_repetitions_list, time_to_string, validate_date, validate_location, verify_fields, daily_notification_sender
+from lib.trending import TrendingAnaliser
+from lib.interest_prediction import InterestPredictor
+from lib.review_summarizer import ReviewSummarizer
+from lib.price_recommender import PriceRecommender
 
 time_start = time.time()
 
@@ -47,6 +56,11 @@ app = FastAPI(
     root_path=os.getenv("ROOT_PATH")
 )
 
+if not os.getenv('TESTING'):
+    daily_notification_sender_process = Process(target=daily_notification_sender)
+    daily_notification_sender_process.start()
+
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET")
 if not os.getenv("STRIPE_SECRET"):
     raise Exception("Stripe secret key not found")
 stripe.api_key = os.getenv("STRIPE_SECRET")
@@ -71,6 +85,8 @@ if os.getenv('TESTING'):
     review_summarizer = ReviewSummarizer(test_client=client)
     price_recommender = PriceRecommender(test_client=client)
     support_lib = SupportLib(test_client=client)
+    reminders_manager = Reminders(test_client=client)
+    mobile_token_manager = MobileToken(test_client=client)
 else:
     services_manager = Services()
     ratings_manager = Ratings()
@@ -79,6 +95,8 @@ else:
     review_summarizer = ReviewSummarizer()
     price_recommender = PriceRecommender()
     support_lib = SupportLib()
+    reminders_manager = Reminders()
+    mobile_token_manager = MobileToken()
 
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id",
                           "category", "price", "location", "max_distance"}
@@ -246,7 +264,8 @@ def review(id: str, body: dict):
     data.update(
         {field: None for field in OPTIONAL_REVIEW_FIELDS if field not in data})
 
-    if not services_manager.get(id):
+    service = services_manager.get(id)
+    if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
     older_review = ratings_manager.get(id, data["user_uuid"])
@@ -275,6 +294,11 @@ def review(id: str, body: dict):
 
     if not os.getenv('TESTING'):
         review_summarizer.add_service(id)
+
+
+    service_name = service["service_name"]
+    provider_id = service["provider_id"]
+    send_notification(mobile_token_manager, provider_id, f"New review!", f"Go and check your service {service_name} to see the new review!") 
 
     return {"status": "ok", "review_id": review_uuid}
 
@@ -308,7 +332,8 @@ def book(id: str, body: dict):
     ) if key in REQUIRED_RENTAL_FIELDS or key in OPTIONAL_RENTAL_FIELDS}
     verify_fields(REQUIRED_RENTAL_FIELDS, OPTIONAL_RENTAL_FIELDS, data)
 
-    if not services_manager.get(id):
+    service = services_manager.get(id)
+    if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
     if not data["end_date"] > data["start_date"]:
@@ -353,6 +378,15 @@ def book(id: str, body: dict):
                 status_code=400, detail="Error creating rentals")
         rental_uuids.append(rental_uuid)
 
+        rental_date = datetime.datetime.strptime(start, '%Y-%m-%d')
+        service_name = service["service_name"]
+        save_reminders(reminders_manager, rental_date, data["provider_id"], service_name, rental_uuid)
+        save_reminders(reminders_manager, rental_date, data["client_id"], service_name, rental_uuid)
+
+    provider_id = services_manager.get(id)["provider_id"]
+    service_name = services_manager.get(id)["service_name"]
+    send_notification(mobile_token_manager, provider_id, f"New booking!", f"Go and check your calendar to see the new booking for your service {service_name}!")
+
     return {"status": "ok", info_key: rental_uuids if len(rental_uuids) > 1 else rental_uuids[0]}
 
 
@@ -376,6 +410,15 @@ def update_booking(id: str, rental_id: str, body: dict):
 
     if not rentals_manager.update_status(rental_id, new_status):
         raise HTTPException(status_code=400, detail="Error updating rental")
+    
+    service_name = services_manager.get(id)["service_name"]
+    provider_id = services_manager.get(id)["provider_id"]
+    client_id = rentals_manager.get(rental_id)["client_id"]
+    send_notification(mobile_token_manager, client_id, f"Booking status update!", f"The status of your booking for the service {service_name} has been updated to {new_status}!")
+    send_notification(mobile_token_manager, provider_id, f"Booking status update!", f"The status of the booking for your service {service_name} has been updated to {new_status}!")
+
+    if new_status in {"rejected", "cancelled"}:
+        rentals_manager.delete_rental_reminders(rental_id)
     return {"status": "ok"}
 
 
