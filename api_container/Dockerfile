@@ -16,6 +16,8 @@ COPY ./api_container/.env /code/.env
 
 RUN cat ./lib/.env >> /code/.env
 
+COPY ./imported_lib/ /code/imported_lib/
+
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 

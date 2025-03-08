@@ -99,6 +99,16 @@ class Services:
             result['_id'] = str(result['_id'])
         return dict(result) if result else None
     
+    def get_by_provider(self, provider_id: str) -> Optional[List[dict]]:
+        results = self.collection.find({'provider_id': provider_id})
+        if not results:
+            return None
+        results = [dict(result) for result in results]
+        for result in results:
+            if '_id' in result:
+                result['_id'] = str(result['_id'])
+        return results
+    
     def delete(self, uuid: str) -> bool:
         result = self.collection.delete_one({'uuid': uuid})
         return result.deleted_count > 0
@@ -116,7 +126,7 @@ class Services:
             logger.error(f"Error updating service with uuid '{uuid}': {e}")
             return False
 
-    def search(self, suspended_providers: set[str], client_location: dict, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, min_avg_rating: float = None, max_avg_rating: float = None) -> Optional[List[dict]]:
+    def search(self, suspended_providers: set[str], client_location: dict, keywords: List[str] = None, provider_id: str = None, min_price: float = None, max_price: float = None, uuid: str = None, hidden: bool = None, min_avg_rating: float = None, max_avg_rating: float = None, category: str = None) -> Optional[List[dict]]:
         pipeline = []
 
         if not os.environ.get('MONGOMOCK'):
@@ -154,6 +164,10 @@ class Services:
             }
             }
             pipeline.append(keyword_stage)
+
+        if category:
+            pipeline.append({'$match': {'category': category
+            }})
 
         if provider_id:
             pipeline.append({'$match': {'provider_id': provider_id}})

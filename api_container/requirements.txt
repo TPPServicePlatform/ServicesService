@@ -10,3 +10,4 @@ networkx
 transformers==4.30.2
 torch
 firebase-admin
+sqlalchemy
