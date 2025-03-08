@@ -113,6 +113,8 @@ PERSONALIZED_TIME = 30 * 3  # days (3 months)
 
 AVAILABLE_OCCUPATIONS = {"LOW", "MEDIUM", "HIGH"}
 
+VALID_CATEGORIES = {"Repair", "Cleaning", "Cooking", "Childcare", "Petcare", "Gardening", "Stilist", "Healthcare", "Education", "Entertainment", "Other"}
+
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
 
@@ -132,12 +134,20 @@ def create(body: dict):
 
     data.update(
         {field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
+    
+    if data["category"] not in VALID_CATEGORIES:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES)}")
 
     uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"],
                                    data["category"], data["price"], data["location"], data["max_distance"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
+
+@app.get("/categories")
+def get_categories():
+    return {"status": "ok", "categories": list(VALID_CATEGORIES)}
 
 @app.put("/certification/add/{service_id}/{certification_id}")
 def add_certification(service_id: str, certification_id: str):
@@ -180,6 +190,11 @@ def update(id: str, body: dict):
 
     if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
+    
+    if "category" in update and update["category"] not in VALID_CATEGORIES:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES
+            )}")
 
     if not services_manager.update(id, update):
         raise HTTPException(status_code=400, detail="Error updating service")
