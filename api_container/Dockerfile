@@ -8,6 +8,7 @@ COPY ./api_container /code/
 
 # Copy the `lib` directory into `/code/lib/`
 COPY ./lib /code/lib/
+COPY ./imported_lib /code/imported_lib/
 
 # Copy the `requirements.txt` directly
 COPY ./api_container/requirements.txt /code/requirements.txt

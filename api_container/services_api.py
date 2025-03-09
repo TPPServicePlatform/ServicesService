@@ -139,6 +139,7 @@ def create(body: dict):
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
 
+
 @app.put("/certification/add/{service_id}/{certification_id}")
 def add_certification(service_id: str, certification_id: str):
     if not services_manager.get(service_id):
@@ -148,6 +149,7 @@ def add_certification(service_id: str, certification_id: str):
         raise HTTPException(
             status_code=400, detail="Error adding certification to service")
     return {"status": "ok"}
+
 
 @app.delete("/certification/delete/{service_id}/{certification_id}")
 def remove_certification(service_id: str, certification_id: str):
@@ -159,17 +161,20 @@ def remove_certification(service_id: str, certification_id: str):
             status_code=400, detail="Error removing certification from service")
     return {"status": "ok"}
 
+
 @app.delete("/{id}")
 def delete(id: str):
     if not services_manager.delete(id):
         raise HTTPException(status_code=404, detail="Service not found")
     return {"status": "ok"}
 
+
 @app.delete("/delete_all/{provider_id}")
 def delete_all(provider_id: str):
     if not services_manager.delete_all(provider_id):
         raise HTTPException(status_code=404, detail="Services not found")
     return {"status": "ok"}
+
 
 @app.put("/{id}")
 def update(id: str, body: dict):
@@ -184,6 +189,7 @@ def update(id: str, body: dict):
     if not services_manager.update(id, update):
         raise HTTPException(status_code=400, detail="Error updating service")
     return {"status": "ok"}
+
 
 @app.get("/provider/{provider_id}")
 def get_by_provider(provider_id: str):
@@ -215,7 +221,7 @@ def search(
 
     suspended_providers = support_lib.get_all_users_suspended()
     results = services_manager.search(suspended_providers,
-        client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
+                                      client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
@@ -296,7 +302,6 @@ def book(id: str, body: dict):
         raise HTTPException(status_code=404, detail="Service not found")
 
     if not data["end_date"] > data["start_date"]:
-
         raise HTTPException(
             status_code=400, detail="End date must be greater than start date")
     starting_time = validate_date(data["start_date"])
@@ -419,6 +424,10 @@ def search_bookings(
             additionals = [additionals_manager.get(
                 additional_id)["additional_name"] for additional_id in result["additionals"]]
             result["additionals"] = additionals
+        service = services_manager.get(result["service_id"])
+        for key in service:
+            if key not in result:
+                result[key] = service[key]
     return {"status": "ok", "results": results}
 
 
@@ -549,6 +558,11 @@ def get_price_recommendation(service_id: str, cost: float, occupation: str):
             status_code=400, detail="Invalid occupation, must be one of: " + ", ".join(AVAILABLE_OCCUPATIONS))
 
     return price_recommender.get_recommendation(service_id, cost, occupation)
+
+
+@app.get("/services/status")
+def get_services_status():
+    return {"status": "ok", "valid_status": VALID_RENTAL_STATUS}
 
 
 def _fetch_recent_ratings(client_location, max_time):

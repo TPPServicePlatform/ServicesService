@@ -1,3 +1,4 @@
+from lib.utils import get_actual_time, get_mongo_client
 from typing import Optional, List, Dict
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -8,14 +9,16 @@ import os
 import sys
 import uuid
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import get_actual_time, get_mongo_client
+sys.path.append(os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '..', '..', 'lib')))
 
 HOUR = 60 * 60
 MINUTE = 60
 MILLISECOND = 1_000
 
 # TODO: (General) -> Create tests for each method && add the required checks in each method
+
+
 class Services:
     """
     Services class that stores data in a MongoDB collection.
@@ -50,7 +53,7 @@ class Services:
             self.db = self.client[test_db or os.getenv('MONGO_DB')]
         self.collection = self.db['services']
         self._create_collection()
-    
+
     def _check_connection(self):
         try:
             self.client.admin.command('ping')
@@ -62,7 +65,7 @@ class Services:
     def _create_collection(self):
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
         self.collection.create_index([('location', '2dsphere')])
-    
+
     def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
@@ -92,13 +95,13 @@ class Services:
         except OperationFailure as e:
             logger.error(f"OperationFailure: {e}")
             return None
-    
+
     def get(self, uuid: str) -> Optional[dict]:
         result = self.collection.find_one({'uuid': uuid})
         if result and '_id' in result:
             result['_id'] = str(result['_id'])
         return dict(result) if result else None
-    
+
     def get_by_provider(self, provider_id: str) -> Optional[List[dict]]:
         results = self.collection.find({'provider_id': provider_id})
         if not results:
@@ -108,15 +111,15 @@ class Services:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
         return results
-    
+
     def delete(self, uuid: str) -> bool:
         result = self.collection.delete_one({'uuid': uuid})
         return result.deleted_count > 0
-    
+
     def delete_provider_services(self, provider_id: str) -> bool:
         result = self.collection.delete_many({'provider_id': provider_id})
         return result.deleted_count > 0
-    
+
     def update(self, uuid: str, data: dict) -> bool:
         data['updated_at'] = get_actual_time()
         try:
@@ -147,7 +150,8 @@ class Services:
                     '$expr': {
                         '$lte': [
                             '$distance',
-                            {'$multiply': ['$max_distance', 1000]} # Convert kilometers to meters
+                            # Convert kilometers to meters
+                            {'$multiply': ['$max_distance', 1000]}
                         ]
                     }
                 }
@@ -156,12 +160,14 @@ class Services:
 
         if keywords and len(keywords) > 0:
             keyword_stage = {
-            '$match': {
-                '$or': [
-                {'service_name': {'$regex': '|'.join(keywords), '$options': 'i'}},
-                {'description': {'$regex': '|'.join(keywords), '$options': 'i'}}
-                ]
-            }
+                '$match': {
+                    '$or': [
+                        {'service_name': {'$regex': '|'.join(
+                            keywords), '$options': 'i'}},
+                        {'description': {'$regex': '|'.join(
+                            keywords), '$options': 'i'}}
+                    ]
+                }
             }
             pipeline.append(keyword_stage)
 
@@ -184,14 +190,18 @@ class Services:
 
         if min_avg_rating:
             # query['$expr'] = {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}
-            pipeline.append({'$match': {'$expr': {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}}})
+            pipeline.append({'$match': {'$expr': {'$gte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {
+                            '$divide': ['$sum_rating', '$num_ratings']}]}, min_avg_rating]}}})
 
         if max_avg_rating:
-            pipeline.append({'$match': {'$expr': {'$lte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, max_avg_rating]}}})
+            pipeline.append({'$match': {'$expr': {'$lte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {
+                            '$divide': ['$sum_rating', '$num_ratings']}]}, max_avg_rating]}}})
 
-        pipeline.append({'$match': {'provider_id': {'$nin': list(suspended_providers)}}})
+        pipeline.append(
+            {'$match': {'provider_id': {'$nin': list(suspended_providers)}}})
 
-        results = [dict(result) for result in self.collection.aggregate(pipeline)]
+        results = [dict(result)
+                   for result in self.collection.aggregate(pipeline)]
 
         for result in results:
             if '_id' in result:
@@ -205,13 +215,13 @@ class Services:
         sum_rating = service['sum_rating'] + rating * (1 if sum else -1)
         num_ratings = service['num_ratings'] + (1 if sum else -1)
         return self.update(service_uuid, {'sum_rating': sum_rating, 'num_ratings': num_ratings, 'updated_at': get_actual_time()})
-            
+
     def get_additionals(self, service_uuid: str) -> List[str]:
         service = self.get(service_uuid)
         if not service:
             return []
         return service.get('additional_ids', [])
-    
+
     def add_additional(self, service_uuid: str, additional_id: str) -> bool:
         service = self.get(service_uuid)
         if not service:
@@ -220,7 +230,7 @@ class Services:
         if additional_id in set(additional_ids):
             return True
         return self.update(service_uuid, {'additional_ids': additional_ids + [additional_id], 'updated_at': get_actual_time()})
-    
+
     def remove_additional(self, service_uuid: str, additional_id: str) -> bool:
         service = self.get(service_uuid)
         if not service:
@@ -229,11 +239,12 @@ class Services:
         if additional_id not in additional_ids:
             return True
         return self.update(service_uuid, {'additional_ids': list(additional_ids - {additional_id}), 'updated_at': get_actual_time()})
-    
+
     def ratings_by_provider(self, provider_id: str) -> Optional[List[Dict]]:
         results = self.collection.aggregate([
             {'$match': {'provider_id': provider_id}},
-            {'$group': {'_id': provider_id, 'sum_rating': {'$sum': '$sum_rating'}, 'num_ratings': {'$sum': '$num_ratings'}, 'count': {'$sum': 1}, 'provider_id': {'$first': '$provider_id'}}}
+            {'$group': {'_id': provider_id, 'sum_rating': {'$sum': '$sum_rating'}, 'num_ratings': {
+                '$sum': '$num_ratings'}, 'count': {'$sum': 1}, 'provider_id': {'$first': '$provider_id'}}}
         ])
         results = [dict(result) for result in results]
         for result in results:
@@ -241,7 +252,7 @@ class Services:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
         return results[0] or None
-    
+
     def get_similar_services(self, client_location: dict, category: str) -> Optional[List[Dict]]:
         pipeline = []
 
@@ -263,26 +274,27 @@ class Services:
                     '$expr': {
                         '$lte': [
                             '$distance',
-                            {'$multiply': ['$max_distance', 1000]} # Convert kilometers to meters
+                            # Convert kilometers to meters
+                            {'$multiply': ['$max_distance', 1000]}
                         ]
                     }
                 }
             }
             pipeline.append(match_stage)
-        
+
         match_stage = {
             '$match': {'category': category}
         }
         pipeline.append(match_stage)
 
-
-        results = [dict(result) for result in self.collection.aggregate(pipeline)]
+        results = [dict(result)
+                   for result in self.collection.aggregate(pipeline)]
 
         for result in results:
             if '_id' in result:
                 result['_id'] = str(result['_id'])
         return results or None
-    
+
     def get_provider_categories(self, provider_id: str) -> List[str]:
         results = self.collection.aggregate([
             {'$match': {'provider_id': provider_id}},
@@ -290,7 +302,7 @@ class Services:
         ])
         results = [result['_id'] for result in results]
         return results or None
-    
+
     def get_provider_category_avg_price(self, provider_id: str, category: str) -> float:
         results = self.collection.aggregate([
             {'$match': {'provider_id': provider_id, 'category': category}},
@@ -298,15 +310,17 @@ class Services:
         ])
         results = [result['avg_price'] for result in results]
         return results[0] if results else None
-    
+
     def get_provider_avg_score(self, provider_id: str) -> float:
         results = self.collection.aggregate([
             {'$match': {'provider_id': provider_id}},
-            {'$group': {'_id': provider_id, 'total_rating_count': {'$sum': '$num_ratings'}, 'total_rating_sum': {'$sum': '$sum_rating'}}}
+            {'$group': {'_id': provider_id, 'total_rating_count': {
+                '$sum': '$num_ratings'}, 'total_rating_sum': {'$sum': '$sum_rating'}}}
         ])
-        avg_score = sum(result['total_rating_sum'] / result['total_rating_count'] for result in results)
+        avg_score = sum(result['total_rating_sum'] /
+                        result['total_rating_count'] for result in results)
         return avg_score / len(results) if results else None
-    
+
     def add_certification(self, service_uuid: str, certification_id: str) -> bool:
         service = self.get(service_uuid)
         if not service:
@@ -315,7 +329,7 @@ class Services:
         if certification_id in certifications:
             return True
         return self.update(service_uuid, {'related_certifications': certifications + [certification_id], 'updated_at': get_actual_time()})
-    
+
     def delete_certification(self, service_uuid: str, certification_id: str) -> bool:
         service = self.get(service_uuid)
         if not service:
@@ -324,7 +338,8 @@ class Services:
         if certification_id not in certifications:
             return True
         return self.update(service_uuid, {'related_certifications': list(certifications - {certification_id}), 'updated_at': get_actual_time()})
-    
+
     def delete_certification(self, provider_id: str, certification_id: str) -> bool:
-        result = self.collection.update_many({'provider_id': provider_id}, {'$pull': {'related_certifications': certification_id}})
+        result = self.collection.update_many({'provider_id': provider_id}, {
+                                             '$pull': {'related_certifications': certification_id}})
         return result.modified_count > 0
