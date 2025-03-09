@@ -199,6 +199,14 @@ def get_by_provider(provider_id: str):
     return {"status": "ok", "results": results}
 
 
+@app.get("/{id}")
+def getbyId(id: str):
+    result = services_manager.get(id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Service not found")
+    return {"status": "ok", "result": result}
+
+
 @app.get("/search")
 def search(
     client_location: str = Query(...),
