@@ -1,10 +1,10 @@
 import datetime
-from mobile_token_nosql import MobileToken
+from mobile_token_nosql import MobileToken, send_notification
 from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
 from lib.interest_prediction import InterestPredictor
 from lib.trending import TrendingAnaliser
-from lib.utils import save_reminders, send_notification, sentry_init, time_to_string, validate_location, verify_fields
+from lib.utils import sentry_init, time_to_string, validate_location, verify_fields, create_repetitions_list, validate_date
 import operator
 import re
 from typing import Optional, Tuple
@@ -12,7 +12,7 @@ from services_nosql import Services
 from rentals_nosql import Rentals
 from ratings_nosql import Ratings
 from additionals_nosql import Additionals
-from reminders_nosql import Reminders
+from reminders_nosql import Reminders, save_reminders, daily_notification_sender
 import mongomock
 import logging as logger
 import time
@@ -24,14 +24,6 @@ import sys
 import os
 import stripe
 from multiprocessing import Process
-
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import create_repetitions_list, time_to_string, validate_date, validate_location, verify_fields, daily_notification_sender
-from lib.trending import TrendingAnaliser
-from lib.interest_prediction import InterestPredictor
-from lib.review_summarizer import ReviewSummarizer
-from lib.price_recommender import PriceRecommender
 
 time_start = time.time()
 

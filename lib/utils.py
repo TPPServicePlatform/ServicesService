@@ -8,10 +8,6 @@ from pymongo.server_api import ServerApi
 import logging as logger
 import re
 import sentry_sdk
-from firebase_admin import messaging
-
-from api_container.mobile_token_nosql import MobileToken
-from api_container.reminders_nosql import Reminders
 
 DAY = 24 * 60 * 60
 HOUR = 60 * 60
@@ -123,46 +119,4 @@ def sentry_init():
             "continuous_profiling_auto_start": True,
         },
     )
-    
-def send_notification(mobile_token_manager: MobileToken, user_id: str, title: str, message: str):
-    token = mobile_token_manager.get_mobile_token(user_id)
-    if not token:
-        logger.error(f"Failed to send notification to user {user_id}: No mobile token found")
-        return
-    message = messaging.Message(
-                    notification=messaging.Notification(
-                        title=title,
-                        body=message,
-                    ),
-                    token=token
-                )
-    messaging.send(message)
-
-def save_reminders(reminders_manager: Reminders, rental_date: str, user_id: str, service_name: str, rental_id: str):
-    today = datetime.datetime.now().strftime('%Y-%m-%d')
-    week_before = datetime.datetime.strptime(rental_date, '%Y-%m-%d') - datetime.timedelta(days=7)
-    week_before = week_before.strftime('%Y-%m-%d')
-    day_before = datetime.datetime.strptime(rental_date, '%Y-%m-%d') - datetime.timedelta(days=1)
-    day_before = day_before.strftime('%Y-%m-%d')
-    title = f"Upcoming rental: {service_name}"
-    if week_before > today:
-        body = f"Your rental of {service_name} is in a week"
-        reminders_manager.add_reminder(week_before, user_id, title, body, rental_id)
-    if day_before > today:
-        body = f"Your rental of {service_name} is tomorrow"
-        reminders_manager.add_reminder(day_before, user_id, title, body, rental_id)
-    body = f"Your rental of {service_name} is today"
-    reminders_manager.add_reminder(rental_date, user_id, title, body, rental_id)
-
-def daily_notification_sender():
-    reminders_manager = Reminders()
-    while True:
-        today = datetime.datetime.now().strftime('%Y-%m-%d')
-        reminders = reminders_manager.get_reminders(today)
-        if reminders:
-            for reminder in reminders:
-                send_notification(reminder['user_id'], reminder['title'], reminder['description'])
-            reminders_manager.delete_date(today)
-        time_until_midnight = (datetime.datetime.strptime(today, '%Y-%m-%d') + datetime.timedelta(days=1) - datetime.datetime.now()).total_seconds()
-        time.sleep(time_until_midnight)
     
