@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
+from lib.utils import get_mongo_client
 from services_nosql import Services
 
 # Run with the following command:
@@ -18,11 +19,12 @@ os.environ['TESTING'] = '1'
 # Set a default MONGO_TEST_DB for testing
 os.environ['MONGO_TEST_DB'] = 'test_db'
 
-load_dotenv()
+ENV_PATH = "ServicesService/api_container/tests/.env"
+load_dotenv(dotenv_path=ENV_PATH)
 
 @pytest.fixture(scope='function')
 def mongo_client():
-    client = MongoClient()
+    client = get_mongo_client()
     yield client
     client.drop_database(os.getenv('MONGO_TEST_DB'))
     client.close()
@@ -68,6 +70,7 @@ def test_search_by_location(services, mocker):
     results = services.search(set(), client_location={'latitude': -34.676567, 'longitude': -58.368461}) # @Avellaneda
    
     # Verify the search results
+    print(results)
     assert len(results) == 2
     names = [result['service_name'] for result in results]
     assert 'Service 1' in names
