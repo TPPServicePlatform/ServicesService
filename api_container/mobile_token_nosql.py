@@ -46,7 +46,10 @@ class MobileToken:
         return True
 
     def _create_collection(self):
-        self.collection.create_index([('user_id', ASCENDING)], unique=True)
+        try:
+            self.collection.create_index([('user_id', ASCENDING)], unique=True)
+        except DuplicateKeyError:
+            logger.warning("Index on 'user_id' already exists.")
 
     def update_mobile_token(self, user_id: str, mobile_token: str):
         actual_time = get_actual_time()
