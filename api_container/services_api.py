@@ -201,8 +201,7 @@ def update(id: str, body: dict):
     
     if "category" in update and update["category"] not in VALID_CATEGORIES:
         raise HTTPException(
-            status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES
-            )}")
+            status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES)}")
 
     if not services_manager.update(id, update):
         raise HTTPException(status_code=400, detail="Error updating service")
