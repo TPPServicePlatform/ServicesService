@@ -1,3 +1,5 @@
+import datetime
+import time
 from typing import Optional, List, Dict, Tuple
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -8,8 +10,8 @@ import os
 import sys
 import uuid
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from lib.utils import get_actual_time, get_mongo_client
+from mobile_token_nosql import send_notification
+from lib.utils import get_mongo_client
 
 HOUR = 60 * 60
 MINUTE = 60
@@ -83,3 +85,31 @@ class Reminders:
     def delete_date(self, date: str) -> bool:
         result = self.collection.delete_one({'date': date})
         return result.deleted_count > 0
+    
+def save_reminders(reminders_manager: Reminders, rental_date: str, user_id: str, service_name: str, rental_id: str):
+    today = datetime.datetime.now().strftime('%Y-%m-%d')
+    week_before = datetime.datetime.strptime(rental_date, '%Y-%m-%d') - datetime.timedelta(days=7)
+    week_before = week_before.strftime('%Y-%m-%d')
+    day_before = datetime.datetime.strptime(rental_date, '%Y-%m-%d') - datetime.timedelta(days=1)
+    day_before = day_before.strftime('%Y-%m-%d')
+    title = f"Upcoming rental: {service_name}"
+    if week_before > today:
+        body = f"Your rental of {service_name} is in a week"
+        reminders_manager.add_reminder(week_before, user_id, title, body, rental_id)
+    if day_before > today:
+        body = f"Your rental of {service_name} is tomorrow"
+        reminders_manager.add_reminder(day_before, user_id, title, body, rental_id)
+    body = f"Your rental of {service_name} is today"
+    reminders_manager.add_reminder(rental_date, user_id, title, body, rental_id)
+
+def daily_notification_sender():
+    reminders_manager = Reminders()
+    while True:
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        reminders = reminders_manager.get_reminders(today)
+        if reminders:
+            for reminder in reminders:
+                send_notification(reminder['user_id'], reminder['title'], reminder['description'])
+            reminders_manager.delete_date(today)
+        time_until_midnight = (datetime.datetime.strptime(today, '%Y-%m-%d') + datetime.timedelta(days=1) - datetime.datetime.now()).total_seconds()
+        time.sleep(time_until_midnight)
