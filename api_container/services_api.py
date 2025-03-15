@@ -47,7 +47,8 @@ app = FastAPI(
 )
 
 if not os.getenv('TESTING'):
-    daily_notification_sender_process = Process(target=daily_notification_sender)
+    daily_notification_sender_process = Process(
+        target=daily_notification_sender)
     daily_notification_sender_process.start()
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET")
@@ -121,7 +122,8 @@ PERSONALIZED_TIME = 30 * 3  # days (3 months)
 
 AVAILABLE_OCCUPATIONS = {"LOW", "MEDIUM", "HIGH"}
 
-VALID_CATEGORIES = {"Repair", "Cleaning", "Cooking", "Childcare", "Petcare", "Gardening", "Stilist", "Healthcare", "Education", "Entertainment", "Other"}
+VALID_CATEGORIES = ["Repair", "Cleaning", "Cooking", "Childcare", "Petcare",
+                    "Gardening", "Stilist", "Healthcare", "Education", "Entertainment", "Other"]
 
 starting_duration = time_to_string(time.time() - time_start)
 logger.info(f"Services API started in {starting_duration}")
@@ -142,7 +144,7 @@ def create(body: dict):
 
     data.update(
         {field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
-    
+
     if data["category"] not in VALID_CATEGORIES:
         raise HTTPException(
             status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES)}")
@@ -153,9 +155,12 @@ def create(body: dict):
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
 
+
 @app.get("/categories")
 def get_categories():
-    return {"status": "ok", "categories": list(VALID_CATEGORIES)}
+
+    return {"status": "ok", "categories": VALID_CATEGORIES}
+
 
 @app.put("/certification/add/{service_id}/{certification_id}")
 def add_certification(service_id: str, certification_id: str):
@@ -167,6 +172,7 @@ def add_certification(service_id: str, certification_id: str):
             status_code=400, detail="Error adding certification to service")
     return {"status": "ok"}
 
+
 @app.delete("/certification/delete/{service_id}/{certification_id}")
 def remove_certification(service_id: str, certification_id: str):
     if not services_manager.get(service_id):
@@ -177,17 +183,20 @@ def remove_certification(service_id: str, certification_id: str):
             status_code=400, detail="Error removing certification from service")
     return {"status": "ok"}
 
+
 @app.delete("/{id}")
 def delete(id: str):
     if not services_manager.delete(id):
         raise HTTPException(status_code=404, detail="Service not found")
     return {"status": "ok"}
 
+
 @app.delete("/delete_all/{provider_id}")
 def delete_all(provider_id: str):
     if not services_manager.delete_all(provider_id):
         raise HTTPException(status_code=404, detail="Services not found")
     return {"status": "ok"}
+
 
 @app.put("/{id}")
 def update(id: str, body: dict):
@@ -198,7 +207,7 @@ def update(id: str, body: dict):
 
     if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
-    
+
     if "category" in update and update["category"] not in VALID_CATEGORIES:
         raise HTTPException(
             status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES)}")
@@ -206,6 +215,7 @@ def update(id: str, body: dict):
     if not services_manager.update(id, update):
         raise HTTPException(status_code=400, detail="Error updating service")
     return {"status": "ok"}
+
 
 @app.get("/provider/{provider_id}")
 def get_by_provider(provider_id: str):
@@ -238,7 +248,7 @@ def search(
 
     suspended_providers = support_lib.get_all_users_suspended()
     results = services_manager.search(suspended_providers,
-        client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating, category)
+                                      client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating, category)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
@@ -284,10 +294,10 @@ def review(id: str, body: dict):
     if not os.getenv('TESTING'):
         review_summarizer.add_service(id)
 
-
     service_name = service["service_name"]
     provider_id = service["provider_id"]
-    send_notification(mobile_token_manager, provider_id, f"New review!", f"Go and check your service {service_name} to see the new review!") 
+    send_notification(mobile_token_manager, provider_id, f"New review!",
+                      f"Go and check your service {service_name} to see the new review!")
 
     return {"status": "ok", "review_id": review_uuid}
 
@@ -369,12 +379,15 @@ def book(id: str, body: dict):
 
         rental_date = datetime.datetime.strptime(start, '%Y-%m-%d')
         service_name = service["service_name"]
-        save_reminders(reminders_manager, rental_date, data["provider_id"], service_name, rental_uuid)
-        save_reminders(reminders_manager, rental_date, data["client_id"], service_name, rental_uuid)
+        save_reminders(reminders_manager, rental_date,
+                       data["provider_id"], service_name, rental_uuid)
+        save_reminders(reminders_manager, rental_date,
+                       data["client_id"], service_name, rental_uuid)
 
     provider_id = services_manager.get(id)["provider_id"]
     service_name = services_manager.get(id)["service_name"]
-    send_notification(mobile_token_manager, provider_id, f"New booking!", f"Go and check your calendar to see the new booking for your service {service_name}!")
+    send_notification(mobile_token_manager, provider_id, f"New booking!",
+                      f"Go and check your calendar to see the new booking for your service {service_name}!")
 
     return {"status": "ok", info_key: rental_uuids if len(rental_uuids) > 1 else rental_uuids[0]}
 
@@ -399,12 +412,14 @@ def update_booking(id: str, rental_id: str, body: dict):
 
     if not rentals_manager.update_status(rental_id, new_status):
         raise HTTPException(status_code=400, detail="Error updating rental")
-    
+
     service_name = services_manager.get(id)["service_name"]
     provider_id = services_manager.get(id)["provider_id"]
     client_id = rentals_manager.get(rental_id)["client_id"]
-    send_notification(mobile_token_manager, client_id, f"Booking status update!", f"The status of your booking for the service {service_name} has been updated to {new_status}!")
-    send_notification(mobile_token_manager, provider_id, f"Booking status update!", f"The status of the booking for your service {service_name} has been updated to {new_status}!")
+    send_notification(mobile_token_manager, client_id, f"Booking status update!",
+                      f"The status of your booking for the service {service_name} has been updated to {new_status}!")
+    send_notification(mobile_token_manager, provider_id, f"Booking status update!",
+                      f"The status of the booking for your service {service_name} has been updated to {new_status}!")
 
     if new_status in {"rejected", "cancelled"}:
         rentals_manager.delete_rental_reminders(rental_id)
@@ -482,6 +497,14 @@ def create_additional(body: dict):
         raise HTTPException(
             status_code=400, detail="Error creating additional")
     return {"status": "ok", "additional_id": uuid}
+
+
+@app.get("/{id}")
+def getbyId(id: str):
+    result = services_manager.get(id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Service not found")
+    return {"status": "ok", "result": result}
 
 
 @app.put("/additionals/{additional_id}")
