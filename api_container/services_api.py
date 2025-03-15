@@ -596,7 +596,8 @@ def get_price_recommendation(service_id: str, cost: float, occupation: str):
         raise HTTPException(
             status_code=400, detail="Invalid occupation, must be one of: " + ", ".join(AVAILABLE_OCCUPATIONS))
 
-    return price_recommender.get_recommendation(service_id, cost, occupation)
+    suspended_providers = support_lib.get_all_users_suspended()
+    return price_recommender.get_recommendation(service_id, cost, occupation, suspended_providers)
 
 
 def _fetch_recent_ratings(client_location, max_time):
@@ -605,8 +606,9 @@ def _fetch_recent_ratings(client_location, max_time):
             status_code=400, detail="Client location is required")
     client_location = validate_location(
         client_location, REQUIRED_LOCATION_FIELDS)
+    suspended_providers = support_lib.get_all_users_suspended()
     all_available_services = [service["uuid"] for service in services_manager.search(
-        client_location, hidden=False)]
+        suspended_providers, client_location, hidden=False)]
     if not all_available_services:
         raise HTTPException(status_code=404, detail="No services found")
 

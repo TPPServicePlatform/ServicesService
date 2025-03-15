@@ -141,15 +141,15 @@ class PriceRecommender:
 
         return recommendation
 
-    def _get_avg_similar_services_price(self, service_id):
+    def _get_avg_similar_services_price(self, service_id, suspended_providers):
         service = self.services_manager.get(service_id)
         location = service['location']
         score = service['sum_rating'] / \
             service['rating_count'] if service['rating_count'] > 0 else None
         category = service['category']
-
+        
         similar_services = self.services_manager.search(
-            location=location, category=category, min_avg_rating=score-0.5, max_avg_rating=score+0.5)
+            suspended_providers, location=location, category=category, min_avg_rating=score-0.5, max_avg_rating=score+0.5)
         similar_services = {
             service['service_name']: service['price'] for service in similar_services}
 
@@ -161,7 +161,7 @@ class PriceRecommender:
 
         return np.mean(similar_prices)
 
-    def get_recommendation(self, service_id, cost, occupation):
+    def get_recommendation(self, service_id, cost, occupation, suspended_providers):
         min_price = cost * OCCUPATION_OBJECTIVES.get(occupation, 0.5)
 
         percentile_range = self._get_percentile_range(service_id)
@@ -175,6 +175,6 @@ class PriceRecommender:
         provider_price = self._get_price_by_percentile(
             similar_percentiles, provider_percentile)
         similar_services_avg_price = self._get_avg_similar_services_price(
-            service_id)
+            service_id, suspended_providers)
 
         return self._get_price_range(min_price, price_range, provider_price, similar_services_avg_price)
