@@ -146,6 +146,11 @@ class Rentals:
         return self.collection.count_documents({'provider_id': provider_id, 'status': 'FINISHED'})
     
     def create_verification_code(self, uuid: str) -> Optional[str]:
+        rental = self.get(uuid)
+        if not rental:
+            return None
+        if rental['verification_code']:
+            return rental['verification_code']
         try:
             verification_code = str(uuid.uuid4())[:6]
             result = self.collection.update_one({'uuid': uuid}, {'$set': {'verification_code': verification_code, 'updated_at': get_actual_time()}})
