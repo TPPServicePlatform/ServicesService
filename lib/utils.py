@@ -71,7 +71,7 @@ def validate_date(date: str) -> str:
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format (must be 'YYYY-MM-DD HH:MM:SS')")
     
-def create_repetitions_list(interval: str, max_repetitions: int, starting_time: str, ending_time: str) -> list:
+def create_repetitions_list(interval: str, max_repetitions: int, first_date: str) -> list:
     def get_month_days(month: int) -> int:
         if month == 2:
             return 28
@@ -82,24 +82,21 @@ def create_repetitions_list(interval: str, max_repetitions: int, starting_time: 
     DELTAS = {
         "DAILY": datetime.timedelta(days=1), 
         "WEEKLY": datetime.timedelta(weeks=1), 
-        "MONTHLY": datetime.timedelta(days= get_month_days(int(starting_time[5:7]))),
+        "MONTHLY": datetime.timedelta(days= get_month_days(int(first_date[5:7]))),
         "YEARLY": datetime.timedelta(days=365)
         }
     
     repetitions = []
-    starting_time = datetime.datetime.strptime(starting_time, '%Y-%m-%d %H:%M:%S')
-    ending_time = datetime.datetime.strptime(ending_time, '%Y-%m-%d %H:%M:%S')
+    first_date = datetime.datetime.strptime(first_date, '%Y-%m-%d %H:%M:%S')
 
     interval = DELTAS.get(interval)
     if interval is None:
         raise HTTPException(status_code=400, detail="Invalid interval (must be 'DAILY', 'WEEKLY', 'MONTHLY' or 'YEARLY')")
     
     while len(repetitions) < max_repetitions:
-        repetitions.append((starting_time.strftime('%Y-%m-%d %H:%M:%S'), ending_time.strftime('%Y-%m-%d %H:%M:%S')))
-        starting_time += interval
-        ending_time += interval
-        # starting_time += DELTAS[interval]
-        # ending_time += DELTAS[interval]
+        repetitions.append(first_date.strftime('%Y-%m-%d %H:%M:%S'))
+        first_date += interval
+
 
     return repetitions
 

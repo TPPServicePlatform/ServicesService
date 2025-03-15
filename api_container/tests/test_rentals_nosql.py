@@ -33,11 +33,11 @@ def rentals(mongo_client):
 def test_insert_rental(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -46,11 +46,11 @@ def test_insert_rental(rentals, mocker):
 def test_search_rental(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -64,11 +64,11 @@ def test_search_rental(rentals, mocker):
 def test_update_rental(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -84,11 +84,11 @@ def test_update_rental(rentals, mocker):
 def test_delete_rental(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -100,20 +100,20 @@ def test_delete_rental(rentals, mocker):
 def test_search_by_service_id(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='wrong_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -129,20 +129,20 @@ def test_search_by_service_id(rentals, mocker):
 def test_search_by_provider_id(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='wrong_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -158,20 +158,20 @@ def test_search_by_provider_id(rentals, mocker):
 def test_search_by_client_id(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='wrong_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -187,20 +187,20 @@ def test_search_by_client_id(rentals, mocker):
 def test_search_by_status(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='ACCEPTED'
     )
@@ -216,58 +216,58 @@ def test_search_by_status(rentals, mocker):
 def test_search_by_date_range(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-02 00:00:00',
-        end_date='2023-01-03 00:00:00',
+        date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
-    rentals = rentals.search(start_date={'MIN': '2023-01-01 00:00:00', 'MAX': '2023-01-01 00:00:00'}, end_date={'MIN': '2023-01-02 00:00:00'})
+    rentals = rentals.search(min_date='2023-01-01 00:00:00', max_date='2023-01-01 00:00:00')
     assert rentals is not None
     assert len(rentals) == 1
     rental = rentals[0]
     assert rental is not None
     assert rental['uuid'] == rental_id
-    assert rental['start_date'] == '2023-01-01 00:00:00'
+    assert rental['date'] == '2023-01-01 00:00:00'
     assert rental['uuid'] == rental_id
 
 def test_search_by_multiple_criteria(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     rental_id = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='wrong_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-02 00:00:00',
-        end_date='2023-01-03 00:00:00',
+        date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='wrong_provider',
         client_id='test_client',
-        start_date='2023-01-02 00:00:00',
-        end_date='2023-01-03 00:00:00',
+        date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
@@ -283,20 +283,20 @@ def test_search_by_multiple_criteria(rentals, mocker):
 def test_total_rentals(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-02 00:00:00',
-        end_date='2023-01-03 00:00:00',
+        date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='ACCEPTED'
     )
@@ -306,20 +306,20 @@ def test_total_rentals(rentals, mocker):
 def test_finished_rentals(rentals, mocker):
     mocker.patch('rentals_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-01 00:00:00',
-        end_date='2023-01-02 00:00:00',
+        date='2023-01-01 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='FINISHED'
     )
     _ = rentals.insert(
+        estimated_duration=None,
         service_id='test_service',
         provider_id='test_provider',
         client_id='test_client',
-        start_date='2023-01-02 00:00:00',
-        end_date='2023-01-03 00:00:00',
+        date='2023-01-02 00:00:00',
         location={'latitude': 0, 'longitude': 0},
         status='PENDING'
     )

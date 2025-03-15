@@ -33,6 +33,7 @@ def services(mongo_client):
 def test_insert_service(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -46,6 +47,7 @@ def test_insert_service(services, mocker):
 def test_get_service(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -64,6 +66,7 @@ def test_get_service(services, mocker):
 def test_delete_service(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -80,6 +83,7 @@ def test_delete_service(services, mocker):
 def test_update_service(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -104,6 +108,7 @@ def test_update_service(services, mocker):
 def test_search_by_keywords(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 1',
         provider_id='test_user_1',
         description='Test Description 1',
@@ -113,6 +118,7 @@ def test_search_by_keywords(services, mocker):
         max_distance=100
     )
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 2',
         provider_id='test_user_2',
         description='Test Description 2',
@@ -128,6 +134,7 @@ def test_search_by_keywords(services, mocker):
 def test_search_by_provider_id(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 1',
         provider_id='test_user_1',
         description='Test Description 1',
@@ -137,6 +144,7 @@ def test_search_by_provider_id(services, mocker):
         max_distance=100
     )
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 2',
         provider_id='test_user_2',
         description='Test Description 2',
@@ -152,6 +160,7 @@ def test_search_by_provider_id(services, mocker):
 def test_search_by_price_range(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 1',
         provider_id='test_user_1',
         description='Test Description 1',
@@ -161,6 +170,7 @@ def test_search_by_price_range(services, mocker):
         max_distance=100
     )
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 2',
         provider_id='test_user_2',
         description='Test Description 2',
@@ -176,6 +186,7 @@ def test_search_by_price_range(services, mocker):
 def test_search_by_hidden_status(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     uuid = services.insert(
+        estimated_duration=None,
         service_name='Test Service 1',
         provider_id='test_user_1',
         description='Test Description 1',
@@ -187,6 +198,7 @@ def test_search_by_hidden_status(services, mocker):
     assert uuid is not None
     services.update(uuid, {'hidden': True})
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 2',
         provider_id='test_user_2',
         description='Test Description 2',
@@ -202,6 +214,7 @@ def test_search_by_hidden_status(services, mocker):
 def test_get_additional_ids(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -216,6 +229,7 @@ def test_get_additional_ids(services, mocker):
 def test_add_additional_id(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -232,6 +246,7 @@ def test_add_additional_id(services, mocker):
 def test_remove_additional_id(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -249,6 +264,7 @@ def test_remove_additional_id(services, mocker):
 def test_ratings_by_provider(services, mocker):
     mocker.patch('services_nosql.get_actual_time', return_value='2023-01-01 00:00:00')
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 1',
         provider_id='test_user_1',
         description='Test Description 1',
@@ -258,6 +274,7 @@ def test_ratings_by_provider(services, mocker):
         max_distance=100
     )
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 2',
         provider_id='test_user_1',
         description='Test Description 2',
@@ -267,6 +284,7 @@ def test_ratings_by_provider(services, mocker):
         max_distance=100
     )
     services.insert(
+        estimated_duration=None,
         service_name='Test Service 3',
         provider_id='test_user_2',
         description='Test Description 3',

@@ -17,8 +17,7 @@ os.environ['MONGO_TEST_DB'] = 'test_db'
 # Add the necessary paths to the Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'lib')))
-from services_api import app, services_manager, ratings_manager, rentals_manager, additionals_manager, create_repetitions_list
-from lib.utils import get_actual_time
+from services_api import app, services_manager, ratings_manager, rentals_manager, additionals_manager, create_repetitions_list, get_actual_time
 
 @pytest.fixture(scope='function')
 def test_app():
@@ -31,8 +30,9 @@ def test_app():
     additionals_manager.collection.drop()
 
 # def test_get_service(test_app, mocker):
-#     mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+#     mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
 #     service_id = services_manager.insert(
+#         estimated_duration=None,
 #         service_name='Test Service',
 #         provider_id='test_user',
 #         description='Test Description',
@@ -48,12 +48,12 @@ def test_app():
 #     assert results[0]['service_name'] == 'Test Service'
 
 def test_create_service(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     body = {
         "service_name": "New Service",
         "provider_id": "new_user",
         "description": "New Description",
-        "category": "New Category",
+        "category": "Repair",
         "price": 150,
         "location": {"latitude": 0, "longitude": 0},
         "max_distance": 150
@@ -63,8 +63,9 @@ def test_create_service(test_app, mocker):
     assert response.json()['status'] == 'ok'
 
 def test_delete_service(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -78,8 +79,9 @@ def test_delete_service(test_app, mocker):
     assert response.json()['status'] == 'ok'
 
 def test_update_service(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service',
         provider_id='test_user',
         description='Test Description',
@@ -100,8 +102,9 @@ def test_update_service(test_app, mocker):
     assert updated_service['description'] == 'Updated Description'
 
 def test_search_by_keywords(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 1',
         provider_id='test_user_1',
         description='Test Description 1',
@@ -118,8 +121,9 @@ def test_search_by_keywords(test_app, mocker):
     assert results[0]['service_name'] == 'Test Service 1'
 
 def test_search_by_provider_id(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 2',
         provider_id='test_user_2',
         description='Test Description 2',
@@ -135,8 +139,9 @@ def test_search_by_provider_id(test_app, mocker):
     assert results[0]['provider_id'] == 'test_user_2'
 
 def test_search_by_price_range(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 3',
         provider_id='test_user_3',
         description='Test Description 3',
@@ -152,8 +157,9 @@ def test_search_by_price_range(test_app, mocker):
     assert results[0]['price'] == 300
 
 def test_search_by_hidden_status(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     uuid = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 4',
         provider_id='test_user_4',
         description='Test Description 4',
@@ -170,8 +176,9 @@ def test_search_by_hidden_status(test_app, mocker):
     assert results[0]['service_name'] == 'Test Service 4'
 
 def test_search_by_uuid(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 5',
         provider_id='test_user_5',
         description='Test Description 5',
@@ -192,8 +199,9 @@ def test_search_by_uuid(test_app, mocker):
 #     assert response.json()['detail'] == "No search parameters provided"
 
 def test_search_no_results(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 6',
         provider_id='test_user_6',
         description='Test Description 6',
@@ -207,8 +215,9 @@ def test_search_no_results(test_app, mocker):
     assert response.json()['detail'] == "No results found"
 
 def test_search_by_min_rating(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 7',
         provider_id='test_user_7',
         description='Test Description 7',
@@ -220,6 +229,7 @@ def test_search_by_min_rating(test_app, mocker):
     services_manager.update_rating(service_id, 5, True)
     services_manager.update_rating(service_id, 5, True)
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 8',
         provider_id='test_user_8',
         description='Test Description 8',
@@ -236,8 +246,9 @@ def test_search_by_min_rating(test_app, mocker):
     assert results[0]['service_name'] == 'Test Service 7'
 
 def test_create_review(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 7',
         provider_id='test_user_7',
         description='Test Description 7',
@@ -257,8 +268,9 @@ def test_create_review(test_app, mocker):
     assert 'review_id' in response.json()
 
 def test_update_review(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 8',
         provider_id='test_user_8',
         description='Test Description 8',
@@ -280,7 +292,7 @@ def test_update_review(test_app, mocker):
     assert updated_review['comment'] == 'Updated Comment'
 
 def test_create_review_no_service(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = 'nonexistent_service'
     response = test_app.put(f"/{service_id}/reviews", json={
         'rating': 4,
@@ -291,8 +303,9 @@ def test_create_review_no_service(test_app, mocker):
     assert response.json()['detail'] == "Service not found"
 
 def test_delete_review(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 9',
         provider_id='test_user_9',
         description='Test Description 9',
@@ -307,15 +320,16 @@ def test_delete_review(test_app, mocker):
     assert response.json()['status'] == 'ok'
 
 def test_delete_review_no_service(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = 'nonexistent_service'
     response = test_app.delete(f"/{service_id}/reviews", params={'user_uuid': 'test_user'})
     assert response.status_code == 404
     assert response.json()['detail'] == "Review not found"
 
 def test_get_all_reviews(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 10',
         provider_id='test_user_10',
         description='Test Description 10',
@@ -334,8 +348,9 @@ def test_get_all_reviews(test_app, mocker):
     assert results[1]['comment'] == 'Test Comment 2'
 
 def test_create_review_updates_sum_rating_and_num_ratings(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 12',
         provider_id='test_user_12',
         description='Test Description 12',
@@ -356,8 +371,9 @@ def test_create_review_updates_sum_rating_and_num_ratings(test_app, mocker):
     assert service['num_ratings'] == 1
 
 def test_create_multiple_reviews_updates_sum_rating_and_num_ratings(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 14',
         provider_id='test_user_14',
         description='Test Description 14',
@@ -387,8 +403,9 @@ def test_create_multiple_reviews_updates_sum_rating_and_num_ratings(test_app, mo
     assert service['num_ratings'] == 2
 
 def test_delete_review_updates_sum_rating_and_num_ratings(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 16',
         provider_id='test_user_16',
         description='Test Description 16',
@@ -409,8 +426,9 @@ def test_delete_review_updates_sum_rating_and_num_ratings(test_app, mocker):
     assert service['num_ratings'] == 0
 
 def test_delete_nonexistent_review(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 17',
         provider_id='test_user_17',
         description='Test Description 17',
@@ -425,12 +443,13 @@ def test_delete_nonexistent_review(test_app, mocker):
     assert response.json()['detail'] == "Review not found"
 
 def test_book_a_service(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 18',
         provider_id='test_user_18',
         description='Test Description 18',
-        category='Test Category 18',
+        category='Repair',
         price=1800,
         location={'latitude': 0, 'longitude': 0},
         max_distance=100
@@ -438,29 +457,28 @@ def test_book_a_service(test_app, mocker):
     response = test_app.post(f"/{service_id}/book", json={
         'provider_id': 'test_user_18',
         'client_id': 'test_user',
-        'start_date': '2023-01-01 00:00:00',
-        'end_date': '2023-01-02 00:00:00',
+        'date': '2030-01-01 00:00:00',
         'location': {'latitude': 0, 'longitude': 0},
     })
     assert response.status_code == 200
     assert response.json()['status'] == 'ok'
 
 def test_book_a_service_no_service(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = 'nonexistent_service'
     response = test_app.post(f"/{service_id}/book", json={
         'provider_id': 'test_user_18',
         'client_id': 'test_user',
-        'start_date': '2023-01-01 00:00:00',
-        'end_date': '2023-01-02 00:00:00',
+        'date': '2023-01-01 00:00:00',
         'location': {'latitude': 0, 'longitude': 0},
     })
     assert response.status_code == 404
     assert response.json()['detail'] == "Service not found"
 
 def test_search_booking_by_client_id(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 20',
         provider_id='test_user_20',
         description='Test Description 20',
@@ -477,8 +495,9 @@ def test_search_booking_by_client_id(test_app, mocker):
     assert results[0]['service_id'] == service_id
 
 def test_update_booking_status(test_app, mocker):
-    mocker.patch('lib.utils.get_actual_time', return_value='2023-01-01 00:00:00')
+    mocker.patch('services_api.get_actual_time', return_value='2023-01-01 00:00:00')
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name='Test Service 21',
         provider_id='test_user_21',
         description='Test Description 21',
@@ -557,6 +576,7 @@ def test_get_additionals_by_provider(test_app, mocker):
 
 def test_add_additional_to_service(test_app, mocker):
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name="Service",
         provider_id="provider_1",
         description="Service Description",
@@ -577,6 +597,7 @@ def test_add_additional_to_service(test_app, mocker):
 
 def test_remove_additional_from_service(test_app, mocker):
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name="Service",
         provider_id="provider_1",
         description="Service Description",
@@ -598,6 +619,7 @@ def test_remove_additional_from_service(test_app, mocker):
 
 def test_get_service_additionals(test_app, mocker):
     service_id = services_manager.insert(
+        estimated_duration=None,
         service_name="Service",
         provider_id="provider_1",
         description="Service Description",
@@ -620,26 +642,26 @@ def test_get_service_additionals(test_app, mocker):
     assert results[0]['additional_name'] == 'Additional'
 
 def test_create_repetitions_list_daily(test_app, mocker):
-    interval = create_repetitions_list("DAILY", 3, '2023-01-01 00:05:35', '2023-01-02 00:05:50')
+    interval = create_repetitions_list("DAILY", 3, '2023-01-01 00:05:35')
     expected_interval = [
-        ('2023-01-01 00:05:35', '2023-01-02 00:05:50'),
-        ('2023-01-02 00:05:35', '2023-01-03 00:05:50'),
-        ('2023-01-03 00:05:35', '2023-01-04 00:05:50')
+        '2023-01-01 00:05:35',
+        '2023-01-02 00:05:35',
+        '2023-01-03 00:05:35'
     ]
     assert interval == expected_interval
 
 def test_create_repetitions_list_weekly(test_app, mocker):
-    interval = create_repetitions_list("WEEKLY", 2, '2023-01-01 00:05:35', '2023-01-02 00:05:50')
+    interval = create_repetitions_list("WEEKLY", 2, '2023-01-01 00:05:35')
     expected_interval = [
-        ('2023-01-01 00:05:35', '2023-01-02 00:05:50'),
-        ('2023-01-08 00:05:35', '2023-01-09 00:05:50')
+        '2023-01-01 00:05:35',
+        '2023-01-08 00:05:35'
     ]
     assert interval == expected_interval
 
 def test_create_repetitions_list_monthly(test_app, mocker):
-    interval = create_repetitions_list("MONTHLY", 2, '2023-01-01 00:05:35', '2023-01-02 00:05:50')
+    interval = create_repetitions_list("MONTHLY", 2, '2023-01-01 00:05:35')
     expected_interval = [
-        ('2023-01-01 00:05:35', '2023-01-02 00:05:50'),
-        ('2023-02-01 00:05:35', '2023-02-02 00:05:50')
+        '2023-01-01 00:05:35',
+        '2023-02-01 00:05:35'
     ]
     assert interval == expected_interval
