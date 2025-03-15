@@ -23,9 +23,9 @@ class Rentals:
     - service_id (str): The uuid of the service
     - additionals (List[str]): The list of uuids of the additionals
     - provider_id (str): The uuid of the provider user
+    - estimated_duration (int): The estimated duration of the rental in minutes
     - client_id (str): The uuid of the client user
-    - start_date (datetime): The start date and time of the rental
-    - end_date (datetime): The end date and time of the rental
+    - date (datetime): The start date and time of the rental
     - location (longitude and latitude): The address of where the service will be provided
     - status (str): The status of the rental (PENDING, ACCEPTED, REJECTED, CANCELLED, FINISHED)
     - created_at (datetime): The date when the rental was created
@@ -56,17 +56,17 @@ class Rentals:
         self.collection.create_index([('provider_id', ASCENDING)])
         self.collection.create_index([('client_id', ASCENDING)])
     
-    def insert(self, service_id: str, provider_id: str, client_id: str, start_date: str, end_date: str, location: Dict, status: str, additionals: List[str] = []) -> Optional[str]:
+    def insert(self, service_id: str, provider_id: str, client_id: str, date: str, estimated_duration: int, location: Dict, status: str, additionals: List[str] = []) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
                 'uuid': str_uuid,
                 'service_id': service_id,
                 'additionals': additionals,
+                'estimated_duration': estimated_duration,
                 'provider_id': provider_id,
                 'client_id': client_id,
-                'start_date': start_date,
-                'end_date': end_date,
+                'date': date,
                 'location': location,
                 'status': status,
                 'created_at': get_actual_time(),
@@ -86,8 +86,8 @@ class Rentals:
             return dict(result)
         return None
 
-    def search(self, rental_uuid: str = None, service_id: str = None, provider_id: str = None, client_id: str = None, status: str = None, start_date: Dict = None, end_date: Dict = None) -> Optional[List[Dict]]:
-        if not any([rental_uuid, service_id, provider_id, client_id, status, start_date, end_date]):
+    def search(self, rental_uuid: str = None, service_id: str = None, provider_id: str = None, client_id: str = None, status: str = None, min_date: str = None, max_date: str = None) -> Optional[List[Dict]]:
+        if not any([rental_uuid, service_id, provider_id, client_id, status, min_date, max_date]):
             return None
         
         pipeline = []
@@ -102,16 +102,10 @@ class Rentals:
         if status:
             pipeline.append({'$match': {'status': status}})
 
-        for range_date in [('start_date', start_date), ('end_date', end_date)]:
-            if range_date[1]:
-                min_date = range_date[1].get('MIN')
-                max_date = range_date[1].get('MAX')
-                if min_date:
-                    # pipeline.append({range_date[0]: {'$gte': min_date}})
-                    pipeline.append({'$match': {range_date[0]: {'$gte': min_date}}})
-                if max_date:
-                    # pipeline.append({range_date[0]: {'$lte': max_date}})
-                    pipeline.append({'$match': {range_date[0]: {'$lte': max_date}}})
+        if min_date:
+            pipeline.append({'$match': {'date': {'$gte': min_date}}})
+        if max_date:
+            pipeline.append({'$match': {'date': {'$lte': max_date}}})
 
         results = [dict(result) for result in self.collection.aggregate(pipeline)]
         for result in results:
@@ -130,6 +124,14 @@ class Rentals:
     def update_status(self, uuid: str, status: str) -> bool:
         try:
             result = self.collection.update_one({'uuid': uuid}, {'$set': {'status': status, 'updated_at': get_actual_time()}})
+            return result.modified_count > 0
+        except Exception as e:
+            logger.error(f"Error updating rental with uuid '{uuid}': {e}")
+            return False
+        
+    def update_estimated_duration(self, uuid: str, estimated_duration: int) -> bool:
+        try:
+            result = self.collection.update_one({'uuid': uuid}, {'$set': {'estimated_duration': estimated_duration, 'updated_at': get_actual_time()}})
             return result.modified_count > 0
         except Exception as e:
             logger.error(f"Error updating rental with uuid '{uuid}': {e}")

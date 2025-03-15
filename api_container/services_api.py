@@ -4,7 +4,7 @@ from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
 from lib.interest_prediction import InterestPredictor
 from lib.trending import TrendingAnaliser
-from lib.utils import sentry_init, time_to_string, validate_location, verify_fields, create_repetitions_list, validate_date
+from lib.utils import sentry_init, time_to_string, validate_location, verify_fields, create_repetitions_list, validate_date, get_actual_time
 import operator
 import re
 from typing import Optional, Tuple
@@ -52,7 +52,7 @@ if not os.getenv('TESTING'):
     daily_notification_sender_process.start()
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET")
-if not os.getenv("STRIPE_SECRET"):
+if not os.getenv("STRIPE_SECRET") and not os.getenv("TESTING"):
     raise Exception("Stripe secret key not found")
 stripe.api_key = os.getenv("STRIPE_SECRET")
 
@@ -92,14 +92,14 @@ else:
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id",
                           "category", "price", "location", "max_distance"}
 REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
-OPTIONAL_CREATE_FIELDS = {"description"}
+OPTIONAL_CREATE_FIELDS = {"description", "estimated_duration"}
 VALID_UPDATE_FIELDS = {"service_name",
-                       "description", "category", "price", "hidden"}
+                       "description", "category", "price", "hidden", "max_distance", "estimated_duration"}
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
 OPTIONAL_REVIEW_FIELDS = {"comment"}
 
 REQUIRED_RENTAL_FIELDS = {"provider_id", "client_id",
-                          "start_date", "end_date", "location"}
+                          "date", "location"}
 OPTIONAL_RENTAL_FIELDS = {"additionals", "repeat", "max_repeats"}
 VALID_RENTAL_STATUS = {"PENDING", "ACCEPTED",
                        "REJECTED", "CANCELLED", "FINISHED"}
@@ -150,7 +150,7 @@ def create(body: dict):
             status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES)}")
 
     uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"],
-                                   data["category"], data["price"], data["location"], data["max_distance"])
+                                   data["category"], data["price"], data["location"], data["max_distance"], data["estimated_duration"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
@@ -158,7 +158,6 @@ def create(body: dict):
 
 @app.get("/categories")
 def get_categories():
-
     return {"status": "ok", "categories": VALID_CATEGORIES}
 
 
@@ -335,12 +334,10 @@ def book(id: str, body: dict):
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
 
-    if not data["end_date"] > data["start_date"]:
-
+    date = validate_date(data["date"])
+    if date < datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'):
         raise HTTPException(
-            status_code=400, detail="End date must be greater than start date")
-    starting_time = validate_date(data["start_date"])
-    ending_time = validate_date(data["end_date"])
+            status_code=400, detail="Date must be greater than current date")
 
     client_location = validate_location(
         data["location"], REQUIRED_LOCATION_FIELDS)
@@ -359,25 +356,25 @@ def book(id: str, body: dict):
 
     if "repeat" in data:
         repetitions = create_repetitions_list(
-            data["repeat"], data["max_repeats"], data["start_date"], data["end_date"])
+            data["repeat"], data["max_repeats"], data["date"])
         info_key = "rental_ids"
     else:
-        repetitions = [(starting_time, ending_time)]
+        repetitions = [date]
         info_key = "rental_id"
 
     rental_uuids = []
-    for repetition in repetitions:
-        start, end = repetition
+    estimated_duration = service["estimated_duration"]
+    for repetition_date in repetitions:
         rental_uuid = rentals_manager.insert(
-            id, data["provider_id"], data["client_id"], start, end, client_location, DEFAULT_RENTAL_STATUS, additionals)
+            id, data["provider_id"], data["client_id"], repetition_date, estimated_duration, client_location, DEFAULT_RENTAL_STATUS, additionals)
         if not rental_uuid:
             for uuid in rental_uuids:
                 rentals_manager.delete(uuid)
             raise HTTPException(
                 status_code=400, detail="Error creating rentals")
         rental_uuids.append(rental_uuid)
-
-        rental_date = datetime.datetime.strptime(start, '%Y-%m-%d')
+        
+        rental_date = repetition_date.split(" ")[0]
         service_name = service["service_name"]
         save_reminders(reminders_manager, rental_date,
                        data["provider_id"], service_name, rental_uuid)
@@ -425,6 +422,22 @@ def update_booking(id: str, rental_id: str, body: dict):
         rentals_manager.delete_rental_reminders(rental_id)
     return {"status": "ok"}
 
+@app.put("/{id}/book/{rental_id}/estimated_duration")
+def update_estimated_duration(id: str, rental_id: str, body: dict):
+    if "estimated_duration" not in body:
+        raise HTTPException(status_code=400, detail="Missing estimated_duration field")
+    new_duration = body["estimated_duration"]
+
+    if not services_manager.get(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    if not rentals_manager.get(rental_id):
+        raise HTTPException(status_code=404, detail="Rental not found")
+
+    if not rentals_manager.update_estimated_duration(rental_id, new_duration):
+        raise HTTPException(status_code=400, detail="Error updating rental")
+
+    return {"status": "ok"}
 
 @app.get("/{id}/paymentlink")
 async def create_payment_link(
@@ -465,15 +478,11 @@ def search_bookings(
     provider_id: Optional[str] = Query(None),
     client_id: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
-    min_start_date: Optional[str] = Query(None),
-    max_start_date: Optional[str] = Query(None),
-    min_end_date: Optional[str] = Query(None),
-    max_end_date: Optional[str] = Query(None)
+    min_date: Optional[str] = Query(None),
+    max_date: Optional[str] = Query(None)
 ):
-    start_date = {"MIN": min_start_date, "MAX": max_start_date}
-    end_date = {"MIN": min_end_date, "MAX": max_end_date}
     results = rentals_manager.search(
-        rental_id, service_id, provider_id, client_id, status, start_date, end_date)
+        rental_id, service_id, provider_id, client_id, status, min_date, max_date)
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
 

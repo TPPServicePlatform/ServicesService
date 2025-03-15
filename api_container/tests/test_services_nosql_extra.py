@@ -39,6 +39,7 @@ def test_search_by_location(services, mocker):
 
     # Insert documents with different locations
     services.insert(
+        estimated_duration=None,
         service_name='Service 1',
         provider_id='provider_1',
         description='Description 1',
@@ -48,6 +49,7 @@ def test_search_by_location(services, mocker):
         max_distance=10
     )
     services.insert(
+        estimated_duration=None,
         service_name='Service 2',
         provider_id='provider_2',
         description='Description 2',
@@ -57,6 +59,7 @@ def test_search_by_location(services, mocker):
         max_distance=10
     )
     services.insert(
+        estimated_duration=None,
         service_name='Service 3',
         provider_id='provider_3',
         description='Description 3',
