@@ -22,6 +22,7 @@ class Rentals:
     - uuid: int (unique) [pk]
     - service_id (str): The uuid of the service
     - additionals (List[str]): The list of uuids of the additionals
+    - verification_code (str): The verification code of the rental
     - provider_id (str): The uuid of the provider user
     - estimated_duration (int): The estimated duration of the rental in minutes
     - client_id (str): The uuid of the client user
@@ -64,6 +65,7 @@ class Rentals:
                 'service_id': service_id,
                 'additionals': additionals,
                 'estimated_duration': estimated_duration,
+                'verification_code': None,
                 'provider_id': provider_id,
                 'client_id': client_id,
                 'date': date,
@@ -142,3 +144,12 @@ class Rentals:
     
     def finished_rentals(self, provider_id: str) -> int:
         return self.collection.count_documents({'provider_id': provider_id, 'status': 'FINISHED'})
+    
+    def create_verification_code(self, uuid: str) -> Optional[str]:
+        try:
+            verification_code = str(uuid.uuid4())[:6]
+            result = self.collection.update_one({'uuid': uuid}, {'$set': {'verification_code': verification_code, 'updated_at': get_actual_time()}})
+            return verification_code if result.modified_count > 0 else None
+        except Exception as e:
+            logger.error(f"Error creating verification code for rental with uuid '{uuid}': {e}")
+            return None
