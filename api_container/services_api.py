@@ -92,7 +92,7 @@ else:
 REQUIRED_CREATE_FIELDS = {"service_name", "provider_id",
                           "category", "price", "location", "max_distance"}
 REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
-OPTIONAL_CREATE_FIELDS = {"description", "estimated_duration"}
+OPTIONAL_CREATE_FIELDS = {"description", "estimated_duration", "images"}
 VALID_UPDATE_FIELDS = {"service_name",
                        "description", "category", "price", "hidden", "max_distance", "estimated_duration"}
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
@@ -150,7 +150,7 @@ def create(body: dict):
             status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES)}")
 
     uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"],
-                                   data["category"], data["price"], data["location"], data["max_distance"], data["estimated_duration"])
+                                   data["category"], data["price"], data["location"], data["max_distance"], data["estimated_duration"], data["images"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}

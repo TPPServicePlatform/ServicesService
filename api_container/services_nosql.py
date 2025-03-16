@@ -21,6 +21,7 @@ class Services:
     - id: int (unique) [pk]
     - service_name (str): The name of the service
     - provider_id (str): The id of the account that provides the service
+    - images (list): The images of the service (list of strings)
     - estimated_duration (int): The estimated duration of the service in minutes
     - description (str): The description of the service
     - related_certifications (list): The certifications related to the service
@@ -62,7 +63,7 @@ class Services:
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
         self.collection.create_index([('location', '2dsphere')])
     
-    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int, estimated_duration: Optional[int]) -> Optional[str]:
+    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int, estimated_duration: Optional[int], images: Optional[List[str]]) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
@@ -77,6 +78,7 @@ class Services:
                 'hidden': False,
                 'sum_rating': 0,
                 'num_ratings': 0,
+                'images': images or [],
                 'reviews_summary': '',
                 'reviews_summary_updated_at': get_actual_time(),
                 'location': {'type': 'Point', 'coordinates': [location['longitude'], location['latitude']]},
