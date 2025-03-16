@@ -63,7 +63,7 @@ class Services:
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
         self.collection.create_index([('location', '2dsphere')])
     
-    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int, estimated_duration: Optional[int], images: Optional[List[str]]) -> Optional[str]:
+    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int, estimated_duration: Optional[int] = None, images: Optional[List[str]] = None) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
