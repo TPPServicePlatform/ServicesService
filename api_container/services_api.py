@@ -154,6 +154,12 @@ def create(body: dict):
 def get_categories():
     return {"status": "ok", "categories": VALID_CATEGORIES}
 
+@app.get("/hiring_report/{provider_id}")
+def get_hiring_report(provider_id: str):
+    report = rentals_manager.get_hiring_report(provider_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="No report found")
+    return {"status": "ok", "report": report}
 
 @app.put("/certification/add/{service_id}/{certification_id}")
 def add_certification(service_id: str, certification_id: str):
