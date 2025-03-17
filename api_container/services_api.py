@@ -22,7 +22,6 @@ from imported_lib.SupportService.support_lib import SupportLib
 from dotenv import load_dotenv
 import sys
 import os
-import stripe
 from multiprocessing import Process
 
 time_start = time.time()
@@ -50,11 +49,6 @@ if not os.getenv('TESTING'):
     daily_notification_sender_process = Process(
         target=daily_notification_sender)
     daily_notification_sender_process.start()
-
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET")
-if not os.getenv("STRIPE_SECRET") and not os.getenv("TESTING"):
-    raise Exception("Stripe secret key not found")
-stripe.api_key = os.getenv("STRIPE_SECRET")
 
 origins = [
 ]
@@ -438,37 +432,6 @@ def update_estimated_duration(id: str, rental_id: str, body: dict):
         raise HTTPException(status_code=400, detail="Error updating rental")
 
     return {"status": "ok"}
-
-@app.get("/{id}/paymentlink")
-async def create_payment_link(
-    id: str,
-    amount: int = Query(..., description="Amount in cents"),
-    currency: str = Query(..., description="Currency code (e.g., 'usd')"),
-    description: str = Query(..., description="Description of the product")
-):
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": currency,
-                        "product_data": {
-                            "name": "Test Product",
-                            "description": description,
-                        },
-                        "unit_amount": amount,
-                    },
-                    "quantity": 1,
-                },
-            ],
-            mode="payment",
-            success_url="https://example.com/success",  # Dummy URL, required by Stripe
-            cancel_url="https://example.com/cancel",  # Dummy URL
-        )
-        return {"url": checkout_session.url}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/bookings")
