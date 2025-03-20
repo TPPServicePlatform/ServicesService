@@ -196,6 +196,8 @@ class Services:
             pipeline.append({'$match': {'$expr': {'$lte': [{'$cond': [{'$eq': ['$num_ratings', 0]}, 0, {'$divide': ['$sum_rating', '$num_ratings']}]}, max_avg_rating]}}})
 
         pipeline.append({'$match': {'provider_id': {'$nin': list(suspended_providers)}}})
+        
+        pipeline.append({'$project': {'images': 0}})
 
         results = [dict(result) for result in self.collection.aggregate(pipeline)]
 
