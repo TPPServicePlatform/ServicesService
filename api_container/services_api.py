@@ -1,4 +1,5 @@
 import datetime
+import random
 from mobile_token_nosql import MobileToken, send_notification
 from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
@@ -50,12 +51,9 @@ if not os.getenv('TESTING'):
         target=daily_notification_sender)
     daily_notification_sender_process.start()
 
-origins = [
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -135,6 +133,19 @@ def create(body: dict):
         raise HTTPException(
             status_code=400, detail="Location must be a dictionary")
     verify_fields(REQUIRED_LOCATION_FIELDS, set(), data["location"])
+    location = validate_location(data["location"], REQUIRED_LOCATION_FIELDS)
+    
+    if not isinstance(data["max_distance"], (int, float)):
+        raise HTTPException(
+            status_code=400, detail="Max distance must be a number")
+    if data["max_distance"] <= 0:
+        raise HTTPException(
+            status_code=400, detail="Max distance must be greater than 0")
+        
+    if not isinstance(data["price"], (int, float)):
+        raise HTTPException(status_code=400, detail="Price must be a number")
+    if data["price"] <= 0:
+        raise HTTPException(status_code=400, detail="Price must be greater than 0")
 
     data.update(
         {field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
@@ -144,7 +155,7 @@ def create(body: dict):
             status_code=400, detail=f"Invalid category, must be one of: {', '.join(VALID_CATEGORIES)}")
 
     uuid = services_manager.insert(data["service_name"], data["provider_id"], data["description"],
-                                   data["category"], data["price"], data["location"], data["max_distance"], data["estimated_duration"], data["images"])
+                                   data["category"], data["price"], location, data["max_distance"], data["estimated_duration"], data["images"])
     if not uuid:
         raise HTTPException(status_code=400, detail="Error creating service")
     return {"status": "ok", "service_id": uuid}
@@ -203,6 +214,20 @@ def update(id: str, body: dict):
     update = {key: value for key,
               value in body.items() if key in VALID_UPDATE_FIELDS}
     verify_fields(set(), VALID_UPDATE_FIELDS, body)
+    
+    if "price" in update:
+        if not isinstance(update["price"], (int, float)):
+            raise HTTPException(status_code=400, detail="Price must be a number")
+        if update["price"] <= 0:
+            raise HTTPException(status_code=400, detail="Price must be greater than 0")
+    
+    if "max_distance" in update:
+        if not isinstance(update["max_distance"], (int, float)):
+            raise HTTPException(
+                status_code=400, detail="Max distance must be a number")
+        if update["max_distance"] <= 0:
+            raise HTTPException(
+                status_code=400, detail="Max distance must be greater than 0")
 
     if not services_manager.get(id):
         raise HTTPException(status_code=404, detail="Service not found")
@@ -265,6 +290,9 @@ def review(id: str, body: dict):
     service = services_manager.get(id)
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
+    
+    if not isinstance(data["rating"], (int, float)):
+        raise HTTPException(status_code=400, detail="Rating must be a number")
 
     older_review = ratings_manager.get(id, data["user_uuid"])
     older_review_uuid = older_review.get(
@@ -600,6 +628,18 @@ def get_price_recommendation(service_id: str, cost: float, occupation: str):
     suspended_providers = support_lib.get_all_users_suspended()
     return price_recommender.get_recommendation(service_id, cost, occupation, suspended_providers)
 
+@app.get("/stats/by_status/last_month")
+def get_stats_by_status_last_month():
+    status_count = rentals_manager.get_stats_by_status_last_month()
+    # complete_status_count = {status: status_count.get(status, 0)
+    complete_status_count = {status: status_count.get(status, random.randint(0, 100)) # MOCK HERE
+                             for status in VALID_RENTAL_STATUS}
+    return {"status": "ok", "results": complete_status_count}
+
+@app.get("/correct/data")
+def correct_data():
+    erroneous_services = services_manager.correct_data()
+    return {"status": "ok", "erroneous_services": str(erroneous_services)}
 
 def _fetch_recent_ratings(client_location, max_time):
     if not client_location:
@@ -627,3 +667,4 @@ def _get_trending_data(reviews_list):
     filtered_services = {service: data for service, data in trending_services.items(
     ) if data["REVIEWS_COUNT"] >= min_reviews}
     return sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
+
