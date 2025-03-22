@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional, List, Dict, Tuple
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -5,7 +6,7 @@ from pymongo import ASCENDING
 from pymongo.errors import DuplicateKeyError, OperationFailure
 import logging as logger
 import os
-import sys
+import time
 import uuid
 from lib.utils import get_actual_time, get_mongo_client
 
@@ -145,6 +146,7 @@ class Rentals:
     def finished_rentals(self, provider_id: str) -> int:
         return self.collection.count_documents({'provider_id': provider_id, 'status': 'FINISHED'})
     
+
     def create_verification_code(self, uuid: str) -> Optional[str]:
         rental = self.get(uuid)
         if not rental:
@@ -158,3 +160,64 @@ class Rentals:
         except Exception as e:
             logger.error(f"Error creating verification code for rental with uuid '{uuid}': {e}")
             return None
+
+
+    def get_hiring_report(self, provider_id: str) -> Dict:
+        """
+        Data to obtain:
+        - Total rentals
+        - Breackdown of rentals by status
+        - Total rentals per month (last 12 months) and the percentage of finished rentals
+        - Total rentals per year and the percentage of finished rentals
+        """
+        total_rentals = self.total_rentals(provider_id)
+        finished_rentals = self.finished_rentals(provider_id)
+        
+        breakdown_by_status = {}
+        for status in ['PENDING', 'ACCEPTED', 'REJECTED', 'CANCELLED', 'FINISHED']:
+            breakdown_by_status[status] = self.collection.count_documents({'provider_id': provider_id, 'status': status})
+            
+        breakdown_by_month = {}
+        actual_month = (time.now().year, time.now().month)
+        for i in range(12):
+            month_str = f"{actual_month[0]}-{actual_month[1]}"
+            month_total = self.collection.count_documents({'provider_id': provider_id, 'date': {'$regex': f'^{month_str}.*'}})
+            month_finished = self.collection.count_documents({'provider_id': provider_id, 'date': {'$regex': f'^{month_str}.*'}, 'status': 'FINISHED'})
+            percentage_finished = 0 if month_total == 0 else month_finished / month_total * 100
+            breakdown_by_month[month_str] = {
+                'total': month_total,
+                'percentage_finished': f"{percentage_finished:.2f}%"
+            }
+            actual_month = (actual_month[0] - 1, 12) if actual_month[1] == 1 else (actual_month[0], actual_month[1] - 1)
+            
+        breakdown_by_year = {}
+        fisrt_year = self.collection.find_one(sort=[('date', ASCENDING)])['date'].year
+        actual_year = time.now().year
+        for year in range(fisrt_year, actual_year + 1):
+            year_str = str(year)
+            year_total = self.collection.count_documents({'provider_id': provider_id, 'date': {'$regex': f'^{year_str}.*'}})
+            year_finished = self.collection.count_documents({'provider_id': provider_id, 'date': {'$regex': f'^{year_str}.*'}, 'status': 'FINISHED'})
+            percentage_finished = 0 if year_total == 0 else year_finished / year_total * 100
+            breakdown_by_year[year_str] = {
+                'total': year_total,
+                'percentage_finished': f"{percentage_finished:.2f}%"
+            }
+            
+        return {
+            'total_rentals': total_rentals,
+            'finished_rentals': finished_rentals,
+            'breakdown_by_status': breakdown_by_status,
+            'breakdown_by_month': breakdown_by_month,
+            'breakdown_by_year': breakdown_by_year
+        }
+            
+
+    def get_stats_by_status_last_month(self) -> dict:
+        pipeline = [
+            {'$match': {'date': {'$gte': datetime.datetime.now() - datetime.timedelta(days=30)}}},
+            {'$group': {'_id': '$status', 'count': {'$sum': 1}}}
+        ]
+        results = self.collection.aggregate(pipeline)
+        return {result['_id']: result['count'] for result in results}
+
+

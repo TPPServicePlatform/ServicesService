@@ -10,7 +10,7 @@ import os
 import sys
 import uuid
 
-from mobile_token_nosql import send_notification
+from mobile_token_nosql import MobileToken, send_notification
 from lib.utils import get_mongo_client
 
 HOUR = 60 * 60
@@ -104,12 +104,13 @@ def save_reminders(reminders_manager: Reminders, rental_date: str, user_id: str,
 
 def daily_notification_sender():
     reminders_manager = Reminders()
+    mobile_token_manager = MobileToken()
     while True:
         today = datetime.datetime.now().strftime('%Y-%m-%d')
         reminders = reminders_manager.get_reminders(today)
         if reminders:
             for reminder in reminders:
-                send_notification(reminder['user_id'], reminder['title'], reminder['description'])
+                send_notification(mobile_token_manager, reminder['user_id'], reminder['title'], reminder['description'])
             reminders_manager.delete_date(today)
         time_until_midnight = (datetime.datetime.strptime(today, '%Y-%m-%d') + datetime.timedelta(days=1) - datetime.datetime.now()).total_seconds()
         time.sleep(time_until_midnight)
