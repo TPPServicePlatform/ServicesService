@@ -450,6 +450,38 @@ def update_booking(id: str, rental_id: str, body: dict):
         rentals_manager.delete_rental_reminders(rental_id)
     return {"status": "ok"}
 
+@app.put("/{id}/book/{rental_id}/verification_code/create")
+def create_verification_code(id: str, rental_id: str):
+    if not services_manager.get(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    if not rentals_manager.get(rental_id):
+        raise HTTPException(status_code=404, detail="Rental not found")
+
+    verification_code = rentals_manager.create_verification_code(rental_id)
+    if not verification_code:
+        raise HTTPException(
+            status_code=400, detail="Error creating verification code")
+    return {"status": "ok", "verification_code": verification_code}
+
+@app.get("/{id}/book/{rental_id}/verification_code/validate")
+def validate_verification_code(id: str, rental_id: str, verification_code: str):
+    if not services_manager.get(id):
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    rental = rentals_manager.get(rental_id)
+    if not rental:
+        raise HTTPException(status_code=404, detail="Rental not found")
+
+    if not rental["verification_code"]:
+        raise HTTPException(
+            status_code=400, detail="Please ask the client to set the service as finished")
+    if rental["verification_code"] != verification_code:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+    rentals_manager.update_status(rental_id, "FINISHED")
+    return {"status": "ok", "message": "Service finished"}
+
+
 @app.put("/{id}/book/{rental_id}/estimated_duration")
 def update_estimated_duration(id: str, rental_id: str, body: dict):
     if "estimated_duration" not in body:
