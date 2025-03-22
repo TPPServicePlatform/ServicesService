@@ -63,7 +63,7 @@ class Services:
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
         self.collection.create_index([('location', '2dsphere')])
     
-    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: str, location: dict, max_distance: int, estimated_duration: Optional[int] = None, images: Optional[List[str]] = None) -> Optional[str]:
+    def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: float, location: dict, max_distance: float, estimated_duration: Optional[int] = None, images: Optional[List[str]] = None) -> Optional[str]:
         try:
             str_uuid = str(uuid.uuid4())
             self.collection.insert_one({
@@ -94,6 +94,97 @@ class Services:
         except OperationFailure as e:
             logger.error(f"OperationFailure: {e}")
             return None
+        
+    def _update_data(self, service: dict):
+        errors = []
+        # ---------- #
+        
+        if "price" in service:
+            if not isinstance(service['price'], (int, float)):
+                try:
+                    service['price'] = float(service['price'])
+                except ValueError:
+                    logger.error(f"Price is not a number: {service['service_name']}")
+                    # bool_result = False
+                    errors.append(f"Price is not a number ({service['price']})")
+        else:
+            logger.error(f"Price is not in the service: {service['service_name']}")
+            # bool_result = False
+            errors.append("Price is not in the service")
+        # ---------- #
+        
+        if "max_distance" in service:
+            if not isinstance(service['max_distance'], (int, float)):
+                try:
+                    service['max_distance'] = float(service['max_distance'])
+                except ValueError:
+                    logger.error(f"Max distance is not a number: {service['service_name']}")
+                    # bool_result = False
+                    errors.append(f"Max distance is not a number ({service['max_distance']})")
+        else:
+            logger.error(f"Max distance is not in the service: {service['service_name']}")
+            # bool_result = False
+            errors.append("Max distance is not in the service")
+        # ---------- #
+        
+        if "location" not in service:
+            logger.error(f"Location is not in the service: {service['service_name']}")
+            # bool_result = False
+            errors.append("Location is not in the service")
+        else:
+            if not isinstance(service['location'], dict):
+                logger.error(f"Location is not a dictionary: {service['service_name']}")
+                # bool_result = False
+                errors.append(f"Location is not a dictionary ({service['location']})")
+            required_keys = {'type', 'coordinates'}
+            if not required_keys.issubset(service['location'].keys()):
+                logger.error(f"Location does not have the required keys: {service['service_name']}")
+                # bool_result = False
+                errors.append(f"Location does not have the required keys ({service['location']})")
+            if not service['location']['type'] == 'Point':
+                logger.error(f"Location type is not 'Point': {service['service_name']}")
+                # bool_result = False
+                errors.append(f"Location type is not 'Point' ({service['location']['type']})")
+            if not isinstance(service['location']['coordinates'], list):
+                logger.error(f"Location coordinates is not a list: {service['service_name']}")
+                # bool_result = False
+                errors.append(f"Location coordinates is not a list ({service['location']['coordinates']})")
+            if len(service['location']['coordinates']) != 2:
+                logger.error(f"Location coordinates does not have 2 elements: {service['service_name']}")
+                # bool_result = False
+                errors.append(f"Location coordinates does not have 2 elements ({service['location']['coordinates']})")
+            for i, coord in enumerate(service['location']['coordinates']):
+                if not isinstance(coord, (int, float)):
+                    try:
+                        service['location']['coordinates'][i] = float(coord)
+                    except ValueError:
+                        logger.error(f"Location coordinates is not a number: {service['service_name']}")
+                        # bool_result = False
+                        coord = "latitude" if i == 1 else "longitude"
+                        errors.append(f"Location coordinate '{coord}' is not a number ({coord})")
+        # ---------- #
+                
+        # update the service
+        self.collection.update_one({'uuid': service['uuid']}, {'$set': service})
+        return errors
+        
+        
+    def correct_data(self):
+        # for each service in the collection
+        # - if the price is not a int or float, convert it to float if possible (if not print the name of the service)
+        # - if the location does not have the format {'type': 'Point', 'coordinates': [location['longitude'], location['latitude']]} print the name of the service
+        # - if the location coordinates is not an array of 2 elements, print the name of the service
+        # - if the location coordinates array has elements that are not numbers, try to convert them to float (if not print the name of the service)
+        # - if the max_distance is not a int or float, convert it to float if possible (if not print the name of the service)
+        erroneous_services = {}
+        for service in self.collection.find():
+            errors = self._update_data(service)
+            if errors:
+                erroneous_services[(service['uuid'], service['service_name'])] = errors
+                # delete the service if it has errors
+                # self.collection.delete_one({'uuid': service['uuid']})
+        return erroneous_services
+        
     
     def get(self, uuid: str) -> Optional[dict]:
         result = self.collection.find_one({'uuid': uuid})
