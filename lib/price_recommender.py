@@ -144,6 +144,8 @@ class PriceRecommender:
     def _get_avg_similar_services_price(self, service_id, suspended_providers):
         service = self.services_manager.get(service_id)
         location = service['location']
+        location = {'longitude': location['coordinates'][0],
+                    'latitude': location['coordinates'][1]}
         score = service['sum_rating'] / \
             service['rating_count'] if service['rating_count'] > 0 else None
         category = service['category']

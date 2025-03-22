@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional, List, Dict, Tuple
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -142,3 +143,11 @@ class Rentals:
     
     def finished_rentals(self, provider_id: str) -> int:
         return self.collection.count_documents({'provider_id': provider_id, 'status': 'FINISHED'})
+    
+    def get_stats_by_status_last_month(self) -> dict:
+        pipeline = [
+            {'$match': {'date': {'$gte': datetime.datetime.now() - datetime.timedelta(days=30)}}},
+            {'$group': {'_id': '$status', 'count': {'$sum': 1}}}
+        ]
+        results = self.collection.aggregate(pipeline)
+        return {result['_id']: result['count'] for result in results}

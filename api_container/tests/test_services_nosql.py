@@ -40,7 +40,8 @@ def test_insert_service(services, mocker):
         category='Test Category',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     assert service_id is not None
 
@@ -54,7 +55,8 @@ def test_get_service(services, mocker):
         category='Test Category',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     services = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, uuid=service_id)
     assert services is not None
@@ -73,7 +75,8 @@ def test_delete_service(services, mocker):
         category='Test Category',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     result = services.delete(service_id)
     assert result is True
@@ -90,7 +93,8 @@ def test_update_service(services, mocker):
         category='Test Category',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     update_data = {
         'service_name': 'Updated Service',
@@ -115,7 +119,8 @@ def test_search_by_keywords(services, mocker):
         category='Test Category 1',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     services.insert(
         estimated_duration=None,
@@ -125,7 +130,8 @@ def test_search_by_keywords(services, mocker):
         category='Test Category 2',
         price=200,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, keywords=['Test Service 1'], provider_id=None, min_price=None, max_price=None, hidden=False)
     assert len(results) == 1
@@ -141,7 +147,8 @@ def test_search_by_provider_id(services, mocker):
         category='Test Category 1',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     services.insert(
         estimated_duration=None,
@@ -151,7 +158,8 @@ def test_search_by_provider_id(services, mocker):
         category='Test Category 2',
         price=200,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, provider_id='test_user_1')
     assert len(results) == 1
@@ -167,7 +175,8 @@ def test_search_by_price_range(services, mocker):
         category='Test Category 1',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     services.insert(
         estimated_duration=None,
@@ -177,7 +186,8 @@ def test_search_by_price_range(services, mocker):
         category='Test Category 2',
         price=200,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, min_price=150, max_price=250)
     assert len(results) == 1
@@ -193,7 +203,8 @@ def test_search_by_hidden_status(services, mocker):
         category='Test Category 1',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     assert uuid is not None
     services.update(uuid, {'hidden': True})
@@ -205,7 +216,8 @@ def test_search_by_hidden_status(services, mocker):
         category='Test Category 2',
         price=200,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     results = services.search(set(), client_location={'latitude': 0, 'longitude': 0}, hidden=False)
     assert len(results) == 1
@@ -221,7 +233,8 @@ def test_get_additional_ids(services, mocker):
         category='Test Category',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     additional_ids = services.get_additionals(service_id)
     assert additional_ids == []
@@ -236,7 +249,8 @@ def test_add_additional_id(services, mocker):
         category='Test Category',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     result = services.add_additional(service_id, 'additional_id_1')
     assert result is True
@@ -253,7 +267,8 @@ def test_remove_additional_id(services, mocker):
         category='Test Category',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     services.add_additional(service_id, 'additional_id_1')
     result = services.remove_additional(service_id, 'additional_id_1')
@@ -271,7 +286,8 @@ def test_ratings_by_provider(services, mocker):
         category='Test Category 1',
         price=100,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     services.insert(
         estimated_duration=None,
@@ -281,7 +297,8 @@ def test_ratings_by_provider(services, mocker):
         category='Test Category 2',
         price=200,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     services.insert(
         estimated_duration=None,
@@ -291,7 +308,8 @@ def test_ratings_by_provider(services, mocker):
         category='Test Category 3',
         price=300,
         location={'latitude': 0, 'longitude': 0},
-        max_distance=100
+        max_distance=100,
+        images=['image1', 'image2']
     )
     results = services.ratings_by_provider('test_user_1')
     print(results)
