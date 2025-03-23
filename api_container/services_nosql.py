@@ -62,6 +62,8 @@ class Services:
     def _create_collection(self):
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
         self.collection.create_index([('location', '2dsphere')])
+        self.collection.create_index([('provider_id', ASCENDING)])
+        self.collection.create_index([('category', ASCENDING)])
     
     def insert(self, service_name: str, provider_id: str, description: Optional[str], category: str, price: float, location: dict, max_distance: float, estimated_duration: Optional[int] = None, images: Optional[List[str]] = None) -> Optional[str]:
         try:
@@ -259,8 +261,7 @@ class Services:
             pipeline.append(keyword_stage)
 
         if category:
-            pipeline.append({'$match': {'category': category
-            }})
+            pipeline.append({'$match': {'category': category}})
 
         if provider_id:
             pipeline.append({'$match': {'provider_id': provider_id}})

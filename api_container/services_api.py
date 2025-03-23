@@ -271,8 +271,19 @@ def search(
         client_location, REQUIRED_LOCATION_FIELDS)
 
     suspended_providers = support_lib.get_all_users_suspended()
-    results = services_manager.search(suspended_providers,
-                                      client_location, keywords, provider_id, min_price, max_price, uuid, hidden, min_avg_rating, category)
+    results = services_manager.search(
+        suspended_providers=suspended_providers,
+        client_location=client_location,
+        keywords=keywords,
+        provider_id=provider_id,
+        min_price=min_price,
+        max_price=max_price,
+        uuid=uuid,
+        hidden=hidden,
+        min_avg_rating=min_avg_rating,
+        max_avg_rating=MAX_RATING,
+        category=category
+    )
     if not results:
         raise HTTPException(status_code=404, detail="No results found")
     return {"status": "ok", "results": results}
