@@ -86,7 +86,7 @@ REQUIRED_CREATE_FIELDS = {"service_name", "provider_id",
 REQUIRED_LOCATION_FIELDS = {"longitude", "latitude"}
 OPTIONAL_CREATE_FIELDS = {"description", "estimated_duration", "images"}
 VALID_UPDATE_FIELDS = {"service_name",
-                       "description", "category", "price", "hidden", "max_distance", "estimated_duration"}
+                       "description", "category", "price", "hidden", "max_distance", "estimated_duration", "images"}
 REQUIRED_REVIEW_FIELDS = {"rating", "user_uuid"}
 OPTIONAL_REVIEW_FIELDS = {"comment"}
 
