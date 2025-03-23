@@ -630,6 +630,28 @@ def get_stats_by_status_last_month():
                              for status in VALID_RENTAL_STATUS}
     return {"status": "ok", "results": complete_status_count}
 
+@app.get("/stats/by_category")
+def get_stats_by_category():
+    category_count = services_manager.get_stats_by_category()
+    # complete_category_count = {category: category_count.get(category, 0)
+    complete_category_count = {category: category_count.get(category, random.randint(0, 100)) # MOCK HERE
+                                 for category in VALID_CATEGORIES}
+    return {"status": "ok", "results": complete_category_count}
+
+@app.get("/stats/by_rating")
+def get_stats_by_rating():
+    ratings = ratings_manager.get_stars_count()
+    # complete_ratings = {rating: ratings.get(rating, 0)
+    complete_ratings = {rating: ratings.get(rating, random.randint(0, 100)) # MOCK HERE
+                        for rating in range(MIN_RATING, MAX_RATING + 1)}
+    negative_group = [1, 2]
+    neutral_group = [3, 4]
+    positive_group = [5]
+    negative_count = sum([complete_ratings[rating] for rating in negative_group])
+    neutral_count = sum([complete_ratings[rating] for rating in neutral_group])
+    positive_count = sum([complete_ratings[rating] for rating in positive_group])
+    return {"status": "ok", "results": { "negative": negative_count, "neutral": neutral_count, "positive": positive_count}}
+    
 @app.get("/correct/data")
 def correct_data():
     erroneous_services = services_manager.correct_data()

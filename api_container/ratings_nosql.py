@@ -113,3 +113,11 @@ class Ratings:
             return None
         
         return [rating['comment'] for rating in result]
+    
+    def get_stars_count(self) -> Optional[Dict[int, int]]:
+        query = [{'$group': {'_id': '$rating', 'count': {'$sum': 1}}}]
+        result = self.collection.aggregate(query)
+        if not result:
+            return None
+        
+        return {rating['_id']: rating['count'] for rating in result}
