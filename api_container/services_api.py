@@ -128,11 +128,6 @@ def create(body: dict):
     data = {key: value for key, value in body.items(
     ) if key in REQUIRED_CREATE_FIELDS or key in OPTIONAL_CREATE_FIELDS}
     verify_fields(REQUIRED_CREATE_FIELDS, OPTIONAL_CREATE_FIELDS, data)
-
-    if not isinstance(data["location"], dict):
-        raise HTTPException(
-            status_code=400, detail="Location must be a dictionary")
-    verify_fields(REQUIRED_LOCATION_FIELDS, set(), data["location"])
     location = validate_location(data["location"], REQUIRED_LOCATION_FIELDS)
     
     if not isinstance(data["max_distance"], (int, float)):
@@ -674,24 +669,21 @@ def get_price_recommendation(service_id: str, cost: float, occupation: str):
 @app.get("/stats/by_status/last_month")
 def get_stats_by_status_last_month():
     status_count = rentals_manager.get_stats_by_status_last_month()
-    # complete_status_count = {status: status_count.get(status, 0)
-    complete_status_count = {status: status_count.get(status, random.randint(0, 100)) # MOCK HERE
+    complete_status_count = {status: status_count.get(status, 0)
                              for status in VALID_RENTAL_STATUS}
     return {"status": "ok", "results": complete_status_count}
 
 @app.get("/stats/by_category")
 def get_stats_by_category():
     category_count = services_manager.get_stats_by_category()
-    # complete_category_count = {category: category_count.get(category, 0)
-    complete_category_count = {category: category_count.get(category, random.randint(0, 100)) # MOCK HERE
+    complete_category_count = {category: category_count.get(category, 0)
                                  for category in VALID_CATEGORIES}
     return {"status": "ok", "results": complete_category_count}
 
 @app.get("/stats/by_rating")
 def get_stats_by_rating():
     ratings = ratings_manager.get_stars_count()
-    # complete_ratings = {rating: ratings.get(rating, 0)
-    complete_ratings = {rating: ratings.get(rating, random.randint(0, 100)) # MOCK HERE
+    complete_ratings = {rating: ratings.get(rating, 0)
                         for rating in range(MIN_RATING, MAX_RATING + 1)}
     negative_group = [1, 2]
     neutral_group = [3, 4]
@@ -705,6 +697,17 @@ def get_stats_by_rating():
 def correct_data():
     erroneous_services = services_manager.correct_data()
     return {"status": "ok", "erroneous_services": str(erroneous_services)}
+
+@app.get("/basic/info/{id}")
+def get_basic_info(id: str):
+    service = services_manager.get(id)
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+    data = {
+        "service_name": service["service_name"],
+        "provider_id": service["provider_id"]
+    }
+    return {"status": "ok", "data": data}
 
 def _fetch_recent_ratings(client_location, max_time):
     if not client_location:
