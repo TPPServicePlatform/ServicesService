@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional, List, Dict
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
@@ -428,3 +429,11 @@ class Services:
     def delete_certification(self, provider_id: str, certification_id: str) -> bool:
         result = self.collection.update_many({'provider_id': provider_id}, {'$pull': {'related_certifications': certification_id}})
         return result.modified_count > 0
+    
+    def get_stats_by_category(self) -> dict:
+        pipeline = [
+            {'$match': {'hidden': False}},
+            {'$group': {'_id': '$category', 'count': {'$sum': 1}}}
+        ]
+        results = [dict(result) for result in self.collection.aggregate(pipeline)]
+        return {result['_id']: result['count'] for result in results}
