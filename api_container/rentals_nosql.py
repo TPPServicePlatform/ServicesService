@@ -214,7 +214,7 @@ class Rentals:
 
     def get_stats_by_status_last_month(self) -> dict:
         pipeline = [
-            {'$match': {'date': {'$gte': datetime.datetime.now() - datetime.timedelta(days=30)}}},
+            {'$match': {'updated_at': {'$gte': (datetime.datetime.now() - datetime.timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')}}},
             {'$group': {'_id': '$status', 'count': {'$sum': 1}}}
         ]
         results = self.collection.aggregate(pipeline)
