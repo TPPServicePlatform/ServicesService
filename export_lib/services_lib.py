@@ -16,7 +16,7 @@ class ServicesLib:
         return self.rentals.finished_rentals(provider_id)
     
     def avg_rating(self, provider_id: str) -> Optional[dict]:
-        ratings = self.services.avg_rating(provider_id)
+        ratings = self.services.ratings_by_provider(provider_id)
         if not ratings:
             return None
         
