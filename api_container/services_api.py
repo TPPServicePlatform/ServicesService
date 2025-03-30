@@ -1,5 +1,6 @@
 import datetime
 import random
+from networkx import NodeNotFound
 from mobile_token_nosql import MobileToken, send_notification
 from lib.price_recommender import PriceRecommender
 from lib.review_summarizer import ReviewSummarizer
@@ -543,7 +544,7 @@ def create_additional(body: dict):
     return {"status": "ok", "additional_id": uuid}
 
 
-@app.get("/{id}")
+@app.get("/by_id/{id}")
 def getbyId(id: str):
     result = services_manager.get(id)
     if not result:
@@ -618,13 +619,23 @@ def get_service_additionals(service_id: str):
         additional_id) for additional_id in results]
     return {"status": "ok", "results": additionals}
 
-
 @app.get("/trending")
 def get_trending_services(
     max_services: int,
     offset: int = 0,
     client_location: str = Query(...),
 ):
+    if not isinstance(max_services, int):
+        raise HTTPException(status_code=400, detail="Max services must be a number")
+    if max_services <= 0:
+        raise HTTPException(status_code=400, detail="Max services must be greater than 0")
+    if not isinstance(offset, int):
+        raise HTTPException(status_code=400, detail="Offset must be a number")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="Offset must be greater than or equal to 0")
+    if not client_location:
+        raise HTTPException(status_code=400, detail="Client location is required")
+    client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
     recent_ratings = _fetch_recent_ratings(client_location, TRENDING_TIME)
     ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(
         r['rating'])) for r in recent_ratings]
@@ -642,12 +653,29 @@ def get_personalized_recommendations(
     offset: int = 0,
     client_location: str = Query(...),
 ):
+    if not isinstance(max_services, int):
+        raise HTTPException(status_code=400, detail="Max services must be a number")
+    if max_services <= 0:
+        raise HTTPException(status_code=400, detail="Max services must be greater than 0")
+    if not isinstance(offset, int):
+        raise HTTPException(status_code=400, detail="Offset must be a number")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="Offset must be greater than or equal to 0")
+    if not user_id:
+        raise HTTPException(status_code=400, detail="User ID is required")
+    if not client_location:
+        raise HTTPException(status_code=400, detail="Client location is required")
+    client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
     recent_ratings = _fetch_recent_ratings(client_location, PERSONALIZED_TIME)
     ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}")
                     for r in recent_ratings]
+    logger.info(f"ratings_list: {ratings_list}")
 
-    predictor = InterestPredictor(ratings_list, user_id)
-    predictions = predictor.get_interest_prediction()
+    predictor = InterestPredictor(ratings_list, f"U{user_id}")
+    try:
+        predictions = predictor.get_interest_prediction()
+    except NodeNotFound:
+        raise HTTPException(status_code=404, detail="Not enough data to make a prediction based on the user reviews")
     predictions = sorted(predictions.items(),
                          key=operator.itemgetter(1), reverse=True)
     recommendations = predictions[offset:offset+max_services]
@@ -709,22 +737,15 @@ def get_basic_info(id: str):
     }
     return {"status": "ok", "data": data}
 
+
 def _fetch_recent_ratings(client_location, max_time):
-    if not client_location:
-        raise HTTPException(
-            status_code=400, detail="Client location is required")
-    client_location = validate_location(
-        client_location, REQUIRED_LOCATION_FIELDS)
     suspended_providers = support_lib.get_all_users_suspended()
     all_available_services = [service["uuid"] for service in services_manager.search(
         suspended_providers, client_location, hidden=False)]
     if not all_available_services:
         raise HTTPException(status_code=404, detail="No services found")
 
-    recent_ratings = ratings_manager.get_recent(
-        max_time, all_available_services)
-    return recent_ratings
-
+    return ratings_manager.get_recent(max_time, all_available_services)
 
 def _get_trending_data(reviews_list):
     trending_services = TrendingAnaliser(reviews_list).get_services_rank()
@@ -734,5 +755,8 @@ def _get_trending_data(reviews_list):
 
     filtered_services = {service: data for service, data in trending_services.items(
     ) if data["REVIEWS_COUNT"] >= min_reviews}
-    return sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
+    trending_data = sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
+    if not trending_data:
+        raise HTTPException(status_code=404, detail="No trending services found")
+    return trending_data
 
