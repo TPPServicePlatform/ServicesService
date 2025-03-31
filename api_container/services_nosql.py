@@ -343,6 +343,12 @@ class Services:
                 result['_id'] = str(result['_id'])
         return results[0] or None
     
+    def get_certifications(self, service_uuid: str) -> Optional[List[str]]:
+        service = self.get(service_uuid)
+        if not service:
+            return None
+        return service.get('related_certifications', None)
+    
     def get_similar_services(self, client_location: dict, category: str) -> Optional[List[Dict]]:
         pipeline = []
 

@@ -190,6 +190,16 @@ def remove_certification(service_id: str, certification_id: str):
     return {"status": "ok"}
 
 
+@app.get("/certification/get/{service_id}")
+def get_certification(service_id: str):
+    if not services_manager.get(service_id):
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    certifications = services_manager.get_certifications(service_id)
+    if not certifications:
+        raise HTTPException(status_code=404, detail="No certifications found")
+    return {"status": "ok", "certifications": certifications}
+
 @app.delete("/{id}")
 def delete(id: str):
     if not services_manager.delete(id):
