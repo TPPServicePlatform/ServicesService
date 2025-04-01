@@ -55,7 +55,7 @@ class Services:
         self.collection.create_index([('uuid', ASCENDING)], unique=True)
         self.collection.create_index([('location', '2dsphere')])
     
-    def ratings_by_provider(self, provider_id: str) -> Optional[List[Dict]]:
+    def ratings_by_provider(self, provider_id: str) -> Optional[Dict]:
         results = self.collection.aggregate([
             {'$match': {'provider_id': provider_id}},
             {'$group': {'_id': provider_id, 'sum_rating': {'$sum': '$sum_rating'}, 'num_ratings': {'$sum': '$num_ratings'}, 'count': {'$sum': 1}, 'provider_id': {'$first': '$provider_id'}}}

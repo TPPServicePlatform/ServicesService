@@ -16,12 +16,12 @@ class ServicesLib:
         return self.rentals.finished_rentals(provider_id)
     
     def avg_rating(self, provider_id: str) -> Optional[dict]:
-        ratings = self.services.ratings_by_provider(provider_id)
-        if not ratings:
+        ratings_sum = self.services.ratings_by_provider(provider_id)
+        if not ratings_sum:
             return None
         
-        sum_rating = sum(rating['sum_rating'] for rating in ratings)
-        num_ratings = sum(rating['num_ratings'] for rating in ratings)
+        sum_rating = ratings_sum["sum_rating"]
+        num_ratings = ratings_sum["num_ratings"]
         return {'avg_rating': sum_rating / num_ratings, 'num_ratings': num_ratings}
     
     def get_recent_ratings(self, max_delta_days: int) -> Optional[list[tuple[str, str, float]]]:
