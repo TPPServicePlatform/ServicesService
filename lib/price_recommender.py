@@ -112,7 +112,7 @@ class PriceRecommender:
         service_score = service['sum_rating'] / \
             service['rating_count'] if service['rating_count'] > 0 else None
 
-        return self._get_percentile_range(provider_score, service_score)
+        return self._calculate_percentile_range(provider_score, service_score)
 
     def _get_price_by_percentile(self, percentiles, percentile):
         nearest_percentile = min(
