@@ -94,7 +94,8 @@ class Ratings:
     
     def get_recent(self, max_delta_days: int, available_services: List[str]) -> Optional[list[dict]]:
         query = {'updated_at': {'$gte': get_time_past_days(max_delta_days)},
-                 'service_uuid': {'$in': available_services}}
+             'service_uuid': {'$in': available_services},
+             'rating': {'$gte': 2.9}}
         projection = {'user_uuid': 1, 'service_uuid': 1, 'rating': 1}
         
         result = self.collection.find(query, projection)
