@@ -113,7 +113,7 @@ class Ratings:
         if not result:
             return None
         
-        return [rating['comment'] for rating in result]
+        return [rating['comment'] for rating in result if (rating['comment'] is not None) and (len(rating['comment'])) > 0]
     
     def get_stars_count(self) -> Optional[Dict[int, int]]:
         query = [{'$group': {'_id': '$rating', 'count': {'$sum': 1}}}]

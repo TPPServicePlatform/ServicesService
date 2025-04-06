@@ -311,6 +311,10 @@ def review(id: str, body: dict):
     if not isinstance(data["rating"], (int, float)):
         raise HTTPException(status_code=400, detail="Rating must be a number")
 
+    if not MIN_RATING <= data["rating"] <= MAX_RATING:
+        raise HTTPException(
+            status_code=400, detail=f"Rating must be between {MIN_RATING} and {MAX_RATING}")
+
     older_review = ratings_manager.get(id, data["user_uuid"])
     older_review_uuid = older_review.get(
         "uuid", None) if older_review else None
@@ -318,11 +322,14 @@ def review(id: str, body: dict):
         if not ratings_manager.update(older_review_uuid, data["rating"], data["comment"]):
             raise HTTPException(
                 status_code=400, detail="Error updating review")
-        return {"status": "ok", "review_id": older_review_uuid}
+        if not services_manager.update_rating(id, data["rating"], True):
+            ratings_manager.delete(review_uuid)
+            raise HTTPException(
+                status_code=400, detail="Error updating service rating")
 
-    if not MIN_RATING <= data["rating"] <= MAX_RATING:
-        raise HTTPException(
-            status_code=400, detail=f"Rating must be between {MIN_RATING} and {MAX_RATING}")
+        if not os.getenv('TESTING'):
+            review_summarizer.add_service(id)
+        return {"status": "ok", "review_id": older_review_uuid}
 
     review_uuid = ratings_manager.insert(
         id, data["rating"], data["comment"], data["user_uuid"])

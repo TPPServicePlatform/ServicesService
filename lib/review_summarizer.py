@@ -68,23 +68,27 @@ def update_service(service_id):
             return
         return
 
-    reviews = ratings_manager.get_recent_by_service(
+    reviews = ratings_manager.get_recent_comments_by_service(
         MAX_REVIEWS_TIME, service_id)
+
     if not reviews:
         return
 
-    summary = sum_all(reviews)
+    service_name = service["service_name"]
+    summary = sum_all(reviews, service_name)
     if not summary or len(summary) == 0:
+
         return
+
 
     services_manager.update(service_id, {
                             'reviews_summary': summary, 'reviews_summary_updated_at': datetime.datetime.now()})
     
-def sum_all(reviews):
+def sum_all(reviews, service_name):
     if len(reviews) == 0:
         return ""
 
-    inputs = prepare_inputs(reviews)
+    inputs = prepare_inputs(reviews, service_name)
     summaries = []
 
     # for inp in inputs:
@@ -93,7 +97,7 @@ def sum_all(reviews):
     with multiprocessing.Pool() as pool:
         summaries = pool.map(summarize, inputs)
 
-    return summaries[0] if len(summaries) == 1 else sum_all(summaries)
+    return summaries[0] if len(summaries) == 1 else sum_all(summaries, service_name)
     
 def prepare_inputs(reviews, name):
     header_text = HEADER_TEXT.replace("<NAME>", name)

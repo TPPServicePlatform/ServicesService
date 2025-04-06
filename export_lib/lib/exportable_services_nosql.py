@@ -98,7 +98,7 @@ class Services:
         pipeline.append({'$match': {'hidden': False}})
 
         results = [dict(result) for result in self.collection.aggregate(pipeline)]
-        return [str(result["_id"]) for result in results] if results else None
+        return [result["uuid"] for result in results] if results else None
     
     def delete_certification(self, provider_id: str, certification_id: str) -> bool:
         result = self.collection.update_many({'provider_id': provider_id}, {'$pull': {'related_certifications': certification_id}})
