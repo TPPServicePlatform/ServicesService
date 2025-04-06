@@ -130,18 +130,19 @@ def create(body: dict):
     ) if key in REQUIRED_CREATE_FIELDS or key in OPTIONAL_CREATE_FIELDS}
     verify_fields(REQUIRED_CREATE_FIELDS, OPTIONAL_CREATE_FIELDS, data)
     location = validate_location(data["location"], REQUIRED_LOCATION_FIELDS)
-    
+
     if not isinstance(data["max_distance"], (int, float)):
         raise HTTPException(
             status_code=400, detail="Max distance must be a number")
     if data["max_distance"] <= 0:
         raise HTTPException(
             status_code=400, detail="Max distance must be greater than 0")
-        
+
     if not isinstance(data["price"], (int, float)):
         raise HTTPException(status_code=400, detail="Price must be a number")
     if data["price"] <= 0:
-        raise HTTPException(status_code=400, detail="Price must be greater than 0")
+        raise HTTPException(
+            status_code=400, detail="Price must be greater than 0")
 
     data.update(
         {field: None for field in OPTIONAL_CREATE_FIELDS if field not in data})
@@ -161,12 +162,14 @@ def create(body: dict):
 def get_categories():
     return {"status": "ok", "categories": VALID_CATEGORIES}
 
+
 @app.get("/hiring_report/{provider_id}")
 def get_hiring_report(provider_id: str):
     report = rentals_manager.get_hiring_report(provider_id)
     if not report:
         raise HTTPException(status_code=404, detail="No report found")
     return {"status": "ok", "report": report}
+
 
 @app.put("/certification/add/{service_id}/{certification_id}")
 def add_certification(service_id: str, certification_id: str):
@@ -200,6 +203,7 @@ def get_certification(service_id: str):
         raise HTTPException(status_code=404, detail="No certifications found")
     return {"status": "ok", "certifications": certifications}
 
+
 @app.delete("/{id}")
 def delete(id: str):
     if not services_manager.delete(id):
@@ -220,13 +224,15 @@ def update(id: str, body: dict):
     update = {key: value for key,
               value in body.items() if key in VALID_UPDATE_FIELDS}
     verify_fields(set(), VALID_UPDATE_FIELDS, body)
-    
+
     if "price" in update:
         if not isinstance(update["price"], (int, float)):
-            raise HTTPException(status_code=400, detail="Price must be a number")
+            raise HTTPException(
+                status_code=400, detail="Price must be a number")
         if update["price"] <= 0:
-            raise HTTPException(status_code=400, detail="Price must be greater than 0")
-    
+            raise HTTPException(
+                status_code=400, detail="Price must be greater than 0")
+
     if "max_distance" in update:
         if not isinstance(update["max_distance"], (int, float)):
             raise HTTPException(
@@ -307,7 +313,7 @@ def review(id: str, body: dict):
     service = services_manager.get(id)
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
-    
+
     if not isinstance(data["rating"], (int, float)):
         raise HTTPException(status_code=400, detail="Rating must be a number")
 
@@ -351,6 +357,16 @@ def review(id: str, body: dict):
                       f"Go and check your service {service_name} to see the new review!")
 
     return {"status": "ok", "review_id": review_uuid}
+
+
+@app.get("/images/{service_id}")
+def get_service_images(service_id: str):
+    service = services_manager.get(service_id)
+    if not service:
+        raise HTTPException(status_code=404, detail="Service not found")
+
+    images = service.get("images", [])
+    return {"status": "ok", "images": images}
 
 
 @app.delete("/{id}/reviews")
@@ -425,7 +441,7 @@ def book(id: str, body: dict):
             raise HTTPException(
                 status_code=400, detail="Error creating rentals")
         rental_uuids.append(rental_uuid)
-        
+
         rental_date = repetition_date.split(" ")[0]
         service_name = service["service_name"]
         save_reminders(reminders_manager, rental_date,
@@ -474,6 +490,7 @@ def update_booking(id: str, rental_id: str, body: dict):
         rentals_manager.delete_rental_reminders(rental_id)
     return {"status": "ok"}
 
+
 @app.put("/{id}/book/{rental_id}/verification_code/create")
 def create_verification_code(id: str, rental_id: str):
     if not services_manager.get(id):
@@ -488,6 +505,7 @@ def create_verification_code(id: str, rental_id: str):
             status_code=400, detail="Error creating verification code")
     return {"status": "ok", "verification_code": verification_code}
 
+
 @app.get("/{id}/book/{rental_id}/verification_code/validate")
 def validate_verification_code(id: str, rental_id: str, verification_code: str):
     if not services_manager.get(id):
@@ -501,7 +519,8 @@ def validate_verification_code(id: str, rental_id: str, verification_code: str):
         raise HTTPException(
             status_code=400, detail="Please ask the client to set the service as finished")
     if rental["verification_code"] != verification_code:
-        raise HTTPException(status_code=400, detail="Invalid verification code")
+        raise HTTPException(
+            status_code=400, detail="Invalid verification code")
     rentals_manager.update_status(rental_id, "FINISHED")
     return {"status": "ok", "message": "Service finished"}
 
@@ -509,7 +528,8 @@ def validate_verification_code(id: str, rental_id: str, verification_code: str):
 @app.put("/{id}/book/{rental_id}/estimated_duration")
 def update_estimated_duration(id: str, rental_id: str, body: dict):
     if "estimated_duration" not in body:
-        raise HTTPException(status_code=400, detail="Missing estimated_duration field")
+        raise HTTPException(
+            status_code=400, detail="Missing estimated_duration field")
     new_duration = body["estimated_duration"]
 
     if not services_manager.get(id):
@@ -636,6 +656,7 @@ def get_service_additionals(service_id: str):
         additional_id) for additional_id in results]
     return {"status": "ok", "results": additionals}
 
+
 @app.get("/trending")
 def get_trending_services(
     max_services: int,
@@ -643,16 +664,21 @@ def get_trending_services(
     client_location: str = Query(...),
 ):
     if not isinstance(max_services, int):
-        raise HTTPException(status_code=400, detail="Max services must be a number")
+        raise HTTPException(
+            status_code=400, detail="Max services must be a number")
     if max_services <= 0:
-        raise HTTPException(status_code=400, detail="Max services must be greater than 0")
+        raise HTTPException(
+            status_code=400, detail="Max services must be greater than 0")
     if not isinstance(offset, int):
         raise HTTPException(status_code=400, detail="Offset must be a number")
     if offset < 0:
-        raise HTTPException(status_code=400, detail="Offset must be greater than or equal to 0")
+        raise HTTPException(
+            status_code=400, detail="Offset must be greater than or equal to 0")
     if not client_location:
-        raise HTTPException(status_code=400, detail="Client location is required")
-    client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
+        raise HTTPException(
+            status_code=400, detail="Client location is required")
+    client_location = validate_location(
+        client_location, REQUIRED_LOCATION_FIELDS)
     recent_ratings = _fetch_recent_ratings(client_location, TRENDING_TIME)
     ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}", float(
         r['rating'])) for r in recent_ratings]
@@ -671,18 +697,23 @@ def get_personalized_recommendations(
     client_location: str = Query(...),
 ):
     if not isinstance(max_services, int):
-        raise HTTPException(status_code=400, detail="Max services must be a number")
+        raise HTTPException(
+            status_code=400, detail="Max services must be a number")
     if max_services <= 0:
-        raise HTTPException(status_code=400, detail="Max services must be greater than 0")
+        raise HTTPException(
+            status_code=400, detail="Max services must be greater than 0")
     if not isinstance(offset, int):
         raise HTTPException(status_code=400, detail="Offset must be a number")
     if offset < 0:
-        raise HTTPException(status_code=400, detail="Offset must be greater than or equal to 0")
+        raise HTTPException(
+            status_code=400, detail="Offset must be greater than or equal to 0")
     if not user_id:
         raise HTTPException(status_code=400, detail="User ID is required")
     if not client_location:
-        raise HTTPException(status_code=400, detail="Client location is required")
-    client_location = validate_location(client_location, REQUIRED_LOCATION_FIELDS)
+        raise HTTPException(
+            status_code=400, detail="Client location is required")
+    client_location = validate_location(
+        client_location, REQUIRED_LOCATION_FIELDS)
     recent_ratings = _fetch_recent_ratings(client_location, PERSONALIZED_TIME)
     ratings_list = [(f"U{r['user_uuid']}", f"S{r['service_uuid']}")
                     for r in recent_ratings]
@@ -692,7 +723,8 @@ def get_personalized_recommendations(
     try:
         predictions = predictor.get_interest_prediction()
     except NodeNotFound:
-        raise HTTPException(status_code=404, detail="Not enough data to make a prediction based on the user reviews")
+        raise HTTPException(
+            status_code=404, detail="Not enough data to make a prediction based on the user reviews")
     predictions = sorted(predictions.items(),
                          key=operator.itemgetter(1), reverse=True)
     recommendations = predictions[offset:offset+max_services]
@@ -711,6 +743,7 @@ def get_price_recommendation(service_id: str, cost: float, occupation: str):
     suspended_providers = support_lib.get_all_users_suspended()
     return price_recommender.get_recommendation(service_id, cost, occupation, suspended_providers)
 
+
 @app.get("/stats/by_status/last_month")
 def get_stats_by_status_last_month():
     status_count = rentals_manager.get_stats_by_status_last_month()
@@ -718,12 +751,14 @@ def get_stats_by_status_last_month():
                              for status in VALID_RENTAL_STATUS}
     return {"status": "ok", "results": complete_status_count}
 
+
 @app.get("/stats/by_category")
 def get_stats_by_category():
     category_count = services_manager.get_stats_by_category()
     complete_category_count = {category: category_count.get(category, 0)
-                                 for category in VALID_CATEGORIES}
+                               for category in VALID_CATEGORIES}
     return {"status": "ok", "results": complete_category_count}
+
 
 @app.get("/stats/by_rating")
 def get_stats_by_rating():
@@ -733,15 +768,19 @@ def get_stats_by_rating():
     negative_group = [1, 2]
     neutral_group = [3, 4]
     positive_group = [5]
-    negative_count = sum([complete_ratings[rating] for rating in negative_group])
+    negative_count = sum([complete_ratings[rating]
+                         for rating in negative_group])
     neutral_count = sum([complete_ratings[rating] for rating in neutral_group])
-    positive_count = sum([complete_ratings[rating] for rating in positive_group])
-    return {"status": "ok", "results": { "negative": negative_count, "neutral": neutral_count, "positive": positive_count}}
-    
+    positive_count = sum([complete_ratings[rating]
+                         for rating in positive_group])
+    return {"status": "ok", "results": {"negative": negative_count, "neutral": neutral_count, "positive": positive_count}}
+
+
 @app.get("/correct/data")
 def correct_data():
     erroneous_services = services_manager.correct_data()
     return {"status": "ok", "erroneous_services": str(erroneous_services)}
+
 
 @app.get("/basic/info/{id}")
 def get_basic_info(id: str):
@@ -764,6 +803,7 @@ def _fetch_recent_ratings(client_location, max_time):
 
     return ratings_manager.get_recent(max_time, all_available_services)
 
+
 def _get_trending_data(reviews_list):
     trending_services = TrendingAnaliser(reviews_list).get_services_rank()
     avg_reviews = sum([service["REVIEWS_COUNT"]
@@ -772,8 +812,9 @@ def _get_trending_data(reviews_list):
 
     filtered_services = {service: data for service, data in trending_services.items(
     ) if data["REVIEWS_COUNT"] >= min_reviews}
-    trending_data = sorted(filtered_services.items(), key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
+    trending_data = sorted(filtered_services.items(),
+                           key=lambda x: x[1]["TRENDING_SCORE"], reverse=True)
     if not trending_data:
-        raise HTTPException(status_code=404, detail="No trending services found")
+        raise HTTPException(
+            status_code=404, detail="No trending services found")
     return trending_data
-
